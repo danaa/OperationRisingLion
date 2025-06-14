@@ -3,6 +3,9 @@ class AirplaneGame {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
+        // Set browser title
+        document.title = "Operation Rising Lion";
+        
         // Game settings
         this.gameWidth = this.canvas.width;
         this.gameHeight = this.canvas.height;
@@ -17,7 +20,7 @@ class AirplaneGame {
         
         // Button properties - positioned to align with title
         this.startButton = {
-            x: this.gameWidth / 6 - 50,   // Further left to align with title
+            x: this.gameWidth / 6 - 85,    // Fine-tuned positioning under title center
             y: this.gameHeight / 2 + 100, // Lower middle area
             width: 200,
             height: 60,
@@ -25,7 +28,7 @@ class AirplaneGame {
         };
         
         this.exitButton = {
-            x: this.gameWidth / 6 - 50,   // Same X as start button
+            x: this.gameWidth / 6 - 85,    // Same X as start button
             y: this.gameHeight / 2 + 180, // Below start button
             width: 200,
             height: 60,
