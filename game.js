@@ -9,15 +9,42 @@ class AirplaneGame {
         // Check if device is mobile
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
+        // Add mobile viewport if on mobile
+        if (this.isMobile) {
+            let viewport = document.querySelector('meta[name=viewport]');
+            if (!viewport) {
+                viewport = document.createElement('meta');
+                viewport.name = 'viewport';
+                document.head.appendChild(viewport);
+            }
+            viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+        }
+        
         // Adjust canvas size for mobile (vertical orientation)
         if (this.isMobile) {
-            this.canvas.width = Math.min(400, window.innerWidth - 20);
-            this.canvas.height = Math.min(700, window.innerHeight - 20);
+            // Force mobile to use full available space with proper aspect ratio
+            const screenWidth = Math.min(window.innerWidth, window.screen.width);
+            const screenHeight = Math.min(window.innerHeight, window.screen.height);
+            
+            // Set canvas to use most of the screen in portrait mode
+            this.canvas.width = Math.min(400, screenWidth - 40);
+            this.canvas.height = Math.min(700, screenHeight - 100);
+            
+            // Ensure minimum size for mobile
+            if (this.canvas.width < 300) this.canvas.width = 300;
+            if (this.canvas.height < 500) this.canvas.height = 500;
+            
             // Add mobile-specific styling
+            this.canvas.style.width = this.canvas.width + 'px';
+            this.canvas.style.height = this.canvas.height + 'px';
             this.canvas.style.maxWidth = '100vw';
             this.canvas.style.maxHeight = '100vh';
             this.canvas.style.display = 'block';
-            this.canvas.style.margin = '0 auto';
+            this.canvas.style.margin = '10px auto';
+            this.canvas.style.border = '2px solid #00ff00';
+            this.canvas.style.borderRadius = '10px';
+            
+            console.log(`Mobile canvas size: ${this.canvas.width}x${this.canvas.height}`);
         }
         
         // Game settings
@@ -34,22 +61,27 @@ class AirplaneGame {
         
         // Button properties - adjust for mobile vs desktop
         if (this.isMobile) {
-            // Mobile vertical layout - center buttons
+            // Mobile vertical layout - center buttons with proper sizing
+            const buttonWidth = Math.min(200, this.gameWidth - 40);
+            const buttonHeight = 60;
+            
             this.startButton = {
-                x: this.gameWidth / 2 - 100,
-                y: this.gameHeight / 2 + 80,
-                width: 200,
-                height: 60,
+                x: (this.gameWidth - buttonWidth) / 2,
+                y: this.gameHeight / 2 + 60,
+                width: buttonWidth,
+                height: buttonHeight,
                 hovered: false
             };
             
             this.exitButton = {
-                x: this.gameWidth / 2 - 100,
-                y: this.gameHeight / 2 + 160,
-                width: 200,
-                height: 60,
+                x: (this.gameWidth - buttonWidth) / 2,
+                y: this.gameHeight / 2 + 140,
+                width: buttonWidth,
+                height: buttonHeight,
                 hovered: false
             };
+            
+            console.log(`Mobile buttons positioned at: start=(${this.startButton.x}, ${this.startButton.y}), exit=(${this.exitButton.x}, ${this.exitButton.y})`);
         } else {
             // Desktop layout (original positioning)
             this.startButton = {
@@ -288,18 +320,19 @@ class AirplaneGame {
         spriteCanvas.height = this.startButton.height;
         const spriteCtx = spriteCanvas.getContext('2d');
         
-        // Button background
-        spriteCtx.fillStyle = '#004400';
+        // Button background - brighter for mobile
+        spriteCtx.fillStyle = this.isMobile ? '#006600' : '#004400';
         spriteCtx.fillRect(0, 0, this.startButton.width, this.startButton.height);
         
-        // Button border
+        // Button border - thicker for mobile
         spriteCtx.strokeStyle = '#00ff00';
-        spriteCtx.lineWidth = 3;
+        spriteCtx.lineWidth = this.isMobile ? 4 : 3;
         spriteCtx.strokeRect(0, 0, this.startButton.width, this.startButton.height);
         
-        // Button text
+        // Button text - adjust size for mobile
         spriteCtx.fillStyle = '#00ff00';
-        spriteCtx.font = 'bold 24px Courier New';
+        const fontSize = this.isMobile ? Math.min(20, this.startButton.width / 10) : 24;
+        spriteCtx.font = `bold ${fontSize}px Courier New`;
         spriteCtx.textAlign = 'center';
         spriteCtx.fillText('START GAME', this.startButton.width / 2, this.startButton.height / 2 + 8);
         
@@ -312,18 +345,19 @@ class AirplaneGame {
         spriteCanvas.height = this.exitButton.height;
         const spriteCtx = spriteCanvas.getContext('2d');
         
-        // Button background
-        spriteCtx.fillStyle = '#440000';
+        // Button background - brighter for mobile
+        spriteCtx.fillStyle = this.isMobile ? '#660000' : '#440000';
         spriteCtx.fillRect(0, 0, this.exitButton.width, this.exitButton.height);
         
-        // Button border
+        // Button border - thicker for mobile
         spriteCtx.strokeStyle = '#ff0000';
-        spriteCtx.lineWidth = 3;
+        spriteCtx.lineWidth = this.isMobile ? 4 : 3;
         spriteCtx.strokeRect(0, 0, this.exitButton.width, this.exitButton.height);
         
-        // Button text
+        // Button text - adjust size for mobile
         spriteCtx.fillStyle = '#ff0000';
-        spriteCtx.font = 'bold 24px Courier New';
+        const fontSize = this.isMobile ? Math.min(20, this.exitButton.width / 10) : 24;
+        spriteCtx.font = `bold ${fontSize}px Courier New`;
         spriteCtx.textAlign = 'center';
         spriteCtx.fillText('EXIT', this.exitButton.width / 2, this.exitButton.height / 2 + 8);
         
@@ -532,14 +566,31 @@ class AirplaneGame {
         if (this.isMobile) {
             let touchStartX = 0;
             let touchStartY = 0;
+            let isTouching = false;
             const minSwipeDistance = 30; // Minimum distance for a swipe
 
             this.canvas.addEventListener('touchstart', (e) => {
                 e.preventDefault(); // Prevent scrolling
+                isTouching = true;
+                
+                const rect = this.canvas.getBoundingClientRect();
                 touchStartX = e.touches[0].clientX;
                 touchStartY = e.touches[0].clientY;
-
-                // Handle shooting on tap
+                
+                // Update mouse position for button detection
+                this.mousePos.x = touchStartX - rect.left;
+                this.mousePos.y = touchStartY - rect.top;
+                
+                console.log(`Touch start at: ${this.mousePos.x}, ${this.mousePos.y}`);
+                console.log(`Canvas rect: ${rect.left}, ${rect.top}, ${rect.width}, ${rect.height}`);
+                console.log(`Start button: ${this.startButton.x}, ${this.startButton.y}, ${this.startButton.width}, ${this.startButton.height}`);
+                
+                // Handle splash screen touch
+                if (this.gameState === 'splash') {
+                    this.updateButtonHover();
+                }
+                
+                // Handle shooting on tap during gameplay
                 if (this.gameState === 'playing') {
                     this.shootRocket();
                 }
@@ -547,42 +598,54 @@ class AirplaneGame {
 
             this.canvas.addEventListener('touchmove', (e) => {
                 e.preventDefault(); // Prevent scrolling
-                if (this.gameState !== 'playing') return;
-
+                
+                const rect = this.canvas.getBoundingClientRect();
                 const touchX = e.touches[0].clientX;
                 const touchY = e.touches[0].clientY;
-                const deltaX = touchX - touchStartX;
-                const deltaY = touchY - touchStartY;
-
-                // Only handle horizontal movement
-                if (Math.abs(deltaX) > minSwipeDistance) {
-                    // Move airplane based on swipe direction
-                    if (deltaX > 0) {
-                        // Swipe right
-                        this.airplane.x = Math.min(this.airplane.x + this.airplane.speed * 2, 
-                            this.gameWidth - this.airplane.width);
-                    } else {
-                        // Swipe left
-                        this.airplane.x = Math.max(this.airplane.x - this.airplane.speed * 2, 0);
-                    }
-                    touchStartX = touchX; // Update start position for continuous movement
-                }
-            });
-
-            // Handle splash screen touch
-            this.canvas.addEventListener('touchmove', (e) => {
+                
+                // Handle splash screen touch move
                 if (this.gameState === 'splash') {
-                    const rect = this.canvas.getBoundingClientRect();
-                    this.mousePos.x = e.touches[0].clientX - rect.left;
-                    this.mousePos.y = e.touches[0].clientY - rect.top;
+                    this.mousePos.x = touchX - rect.left;
+                    this.mousePos.y = touchY - rect.top;
                     this.updateButtonHover();
+                    return;
+                }
+                
+                // Handle gameplay movement
+                if (this.gameState === 'playing') {
+                    const deltaX = touchX - touchStartX;
+                    const deltaY = touchY - touchStartY;
+
+                    // Only handle horizontal movement
+                    if (Math.abs(deltaX) > minSwipeDistance) {
+                        // Move airplane based on swipe direction
+                        if (deltaX > 0) {
+                            // Swipe right
+                            this.airplane.x = Math.min(this.airplane.x + this.airplane.speed * 2, 
+                                this.gameWidth - this.airplane.width);
+                        } else {
+                            // Swipe left
+                            this.airplane.x = Math.max(this.airplane.x - this.airplane.speed * 2, 0);
+                        }
+                        touchStartX = touchX; // Update start position for continuous movement
+                    }
                 }
             });
 
             this.canvas.addEventListener('touchend', (e) => {
-                if (this.gameState === 'splash') {
+                e.preventDefault();
+                
+                if (isTouching && this.gameState === 'splash') {
+                    console.log(`Touch end - buttons hovered: start=${this.startButton.hovered}, exit=${this.exitButton.hovered}`);
                     this.handleSplashClick();
                 }
+                
+                isTouching = false;
+            });
+
+            this.canvas.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                isTouching = false;
             });
         }
     }
