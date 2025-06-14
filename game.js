@@ -37,10 +37,10 @@ class AirplaneGame {
         
         // Airplane properties
         this.airplane = {
-            x: this.gameWidth / 2 - 75, // Center horizontally (adjusted for larger size)
-            y: this.gameHeight - 200,    // Near bottom (more space needed)
-            width: 150,                  // 5x bigger width (30 * 5)
-            height: 175,                 // 5x bigger height (35 * 5)
+            x: this.gameWidth / 2 - 75 * 0.85, // Center horizontally for new size
+            y: this.gameHeight - 170,    // Moved lower (was -200)
+            width: 150 * 0.85,           // 3/4 of previous width
+            height: 175 * 0.85,          // 3/4 of previous height
             speed: 5,
             image: null
         };
@@ -140,9 +140,9 @@ class AirplaneGame {
             this.exitButtonImage = image;
         } else if (key === 'airplane') {
             this.airplane.image = image;
-            // Scale to our desired larger size
-            this.airplane.width = Math.min(image.width * 1.5, 150);  // Scale up to 150% or max 150px
-            this.airplane.height = Math.min(image.height * 1.5, 175); // Scale up to 150% or max 175px
+            // Scale to our desired 3/4 size
+            this.airplane.width = Math.min(image.width * 1.5, 150) * 0.85;  // 3/4 of previous
+            this.airplane.height = Math.min(image.height * 1.5, 175) * 0.85; // 3/4 of previous
         } else if (key === 'background') {
             this.backgroundImage = image;
         } else if (key === 'reactor') {
@@ -304,31 +304,31 @@ class AirplaneGame {
     createReactorSprite() {
         // Create fallback reactor sprite
         const spriteCanvas = document.createElement('canvas');
-        spriteCanvas.width = 120; // Doubled from 60
-        spriteCanvas.height = 120; // Doubled from 60
+        spriteCanvas.width = 120 * 1.3; // 1.3x larger
+        spriteCanvas.height = 120 * 1.3; // 1.3x larger
         const spriteCtx = spriteCanvas.getContext('2d');
         
         // Draw reactor building base (scaled up)
         spriteCtx.fillStyle = '#444444';
-        spriteCtx.fillRect(20, 60, 80, 50); // Doubled dimensions
+        spriteCtx.fillRect(20 * 1.3, 60 * 1.3, 80 * 1.3, 50 * 1.3); // 1.3x larger
         
         // Draw cooling towers (scaled up)
         spriteCtx.fillStyle = '#666666';
-        spriteCtx.fillRect(30, 20, 24, 60); // Doubled dimensions
-        spriteCtx.fillRect(66, 20, 24, 60); // Doubled dimensions
+        spriteCtx.fillRect(30 * 1.3, 20 * 1.3, 24 * 1.3, 60 * 1.3); // 1.3x larger
+        spriteCtx.fillRect(66 * 1.3, 20 * 1.3, 24 * 1.3, 60 * 1.3); // 1.3x larger
         
         // Draw reactor core (glowing center, scaled up)
         spriteCtx.fillStyle = '#ff4444';
-        spriteCtx.fillRect(50, 70, 20, 20); // Doubled dimensions
+        spriteCtx.fillRect(50 * 1.3, 70 * 1.3, 20 * 1.3, 20 * 1.3); // 1.3x larger
         
         // Add glow effect (scaled up)
         spriteCtx.fillStyle = '#ff6666';
-        spriteCtx.fillRect(54, 74, 12, 12); // Doubled dimensions
+        spriteCtx.fillRect(54 * 1.3, 74 * 1.3, 12 * 1.3, 12 * 1.3); // 1.3x larger
         
         // Add warning stripes (scaled up)
         spriteCtx.fillStyle = '#ffff00';
         for (let i = 0; i < 3; i++) {
-            spriteCtx.fillRect(24 + i * 16, 100, 8, 4); // Doubled dimensions
+            spriteCtx.fillRect((24 + i * 16) * 1.3, 100 * 1.3, 8 * 1.3, 4 * 1.3); // 1.3x larger
         }
         
         this.reactorImage = spriteCanvas;
@@ -337,38 +337,38 @@ class AirplaneGame {
     createDamagedReactorSprite() {
         // Create fallback damaged reactor sprite
         const spriteCanvas = document.createElement('canvas');
-        spriteCanvas.width = 120;
-        spriteCanvas.height = 120;
+        spriteCanvas.width = 120 * 1.3;  // 1.3x larger
+        spriteCanvas.height = 120 * 1.3; // 1.3x larger
         const spriteCtx = spriteCanvas.getContext('2d');
         
         // Draw damaged reactor building base
         spriteCtx.fillStyle = '#222222';
-        spriteCtx.fillRect(20, 60, 80, 50);
+        spriteCtx.fillRect(20 * 1.3, 60 * 1.3, 80 * 1.3, 50 * 1.3); // 1.3x larger
         
         // Draw damaged/cracked cooling towers
         spriteCtx.fillStyle = '#444444';
-        spriteCtx.fillRect(30, 20, 24, 60);
-        spriteCtx.fillRect(66, 20, 24, 60);
+        spriteCtx.fillRect(30 * 1.3, 20 * 1.3, 24 * 1.3, 60 * 1.3); // 1.3x larger
+        spriteCtx.fillRect(66 * 1.3, 20 * 1.3, 24 * 1.3, 60 * 1.3); // 1.3x larger
         
         // Add cracks
         spriteCtx.strokeStyle = '#111111';
-        spriteCtx.lineWidth = 2;
+        spriteCtx.lineWidth = 2 * 1.3; // 1.3x larger
         spriteCtx.beginPath();
-        spriteCtx.moveTo(35, 25);
-        spriteCtx.lineTo(45, 75);
-        spriteCtx.moveTo(70, 30);
-        spriteCtx.lineTo(80, 70);
+        spriteCtx.moveTo(35 * 1.3, 25 * 1.3);
+        spriteCtx.lineTo(45 * 1.3, 75 * 1.3);
+        spriteCtx.moveTo(70 * 1.3, 30 * 1.3);
+        spriteCtx.lineTo(80 * 1.3, 70 * 1.3);
         spriteCtx.stroke();
         
         // Draw damaged reactor core (dim)
         spriteCtx.fillStyle = '#664444';
-        spriteCtx.fillRect(50, 70, 20, 20);
+        spriteCtx.fillRect(50 * 1.3, 70 * 1.3, 20 * 1.3, 20 * 1.3); // 1.3x larger
         
         // Add smoke effect
         spriteCtx.fillStyle = 'rgba(100, 100, 100, 0.7)';
         for (let i = 0; i < 5; i++) {
             spriteCtx.beginPath();
-            spriteCtx.arc(60 + i * 8, 15 - i * 2, 3 + i, 0, Math.PI * 2);
+            spriteCtx.arc((60 + i * 8) * 1.3, (15 - i * 2) * 1.3, (3 + i) * 1.3, 0, Math.PI * 2);
             spriteCtx.fill();
         }
         
@@ -388,17 +388,17 @@ class AirplaneGame {
         
         // Try to find a good X position that doesn't overlap
         do {
-            x = Math.random() * (this.gameWidth - 120);
+            x = Math.random() * (this.gameWidth - 120 * 1.3); // Account for larger size
             attempts++;
-        } while (Math.abs(x - this.lastReactorX) < 150 && attempts < 10);
+        } while (Math.abs(x - this.lastReactorX) < 150 * 1.3 && attempts < 10); // Increased spacing for larger size
         
         this.lastReactorX = x;
         
         const reactor = {
             x: x,
-            y: customY !== null ? customY : -120,
-            width: 120,
-            height: 120,
+            y: customY !== null ? customY : -120 * 1.3, // Account for larger size
+            width: 120 * 1.3,  // 1.3x larger
+            height: 120 * 1.3, // 1.3x larger
             speed: this.backgroundSpeed,
             destroyed: false,
             damaged: false,
@@ -886,6 +886,9 @@ class AirplaneGame {
     
     drawAirplane() {
         if (this.airplane.image) {
+            // Add a stronger glow effect
+            this.ctx.shadowColor = 'rgba(0, 255, 0, 0.7)'; // Changed from cyan to green and increased opacity
+            this.ctx.shadowBlur = 15; // Increased from 5
             this.ctx.drawImage(
                 this.airplane.image,
                 this.airplane.x,
@@ -894,9 +897,9 @@ class AirplaneGame {
                 this.airplane.height
             );
             
-            // Add a subtle glow effect
-            this.ctx.shadowColor = 'rgba(0, 255, 255, 0.5)';
-            this.ctx.shadowBlur = 5;
+            // Add a second glow layer for more intensity
+            this.ctx.shadowColor = 'rgba(0, 255, 0, 0.4)';
+            this.ctx.shadowBlur = 25;
             this.ctx.drawImage(
                 this.airplane.image,
                 this.airplane.x,
@@ -904,6 +907,7 @@ class AirplaneGame {
                 this.airplane.width,
                 this.airplane.height
             );
+            
             this.ctx.shadowBlur = 0;
         }
     }
@@ -946,8 +950,8 @@ class AirplaneGame {
         this.canShoot = true;
         
         // Reset airplane position
-        this.airplane.x = this.gameWidth / 2 - 75;
-        this.airplane.y = this.gameHeight - 200;
+        this.airplane.x = this.gameWidth / 2 - 75 * 0.75;
+        this.airplane.y = this.gameHeight - 150;
         
         console.log('Game reset complete');
     }
