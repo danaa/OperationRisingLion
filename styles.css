@@ -1,0 +1,72 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Courier New', monospace;
+    color: #fff;
+}
+
+.game-container {
+    position: relative;
+    border: 2px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+}
+
+#gameCanvas {
+    display: block;
+    background: linear-gradient(180deg, 
+        #001122 0%, 
+        #002244 30%, 
+        #003366 60%, 
+        #004488 100%);
+}
+
+.game-ui {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    z-index: 10;
+}
+
+.controls {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    color: #00ff00;
+    border: 1px solid rgba(0, 255, 0, 0.5);
+}
+
+.controls p {
+    margin: 2px 0;
+}
+
+/* Loading animation for assets */
+.loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #00ff00;
+    font-size: 18px;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.3; }
+}
+
+.loading::after {
+    content: '...';
+    animation: blink 1s infinite;
+} 
