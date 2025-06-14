@@ -6,9 +6,15 @@ class AirplaneGame {
         // Set browser title
         document.title = "Operation Rising Lion";
         
+        // Check if device is mobile
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
         // Game settings
         this.gameWidth = this.canvas.width;
         this.gameHeight = this.canvas.height;
+        
+        // Mobile UI scaling factor
+        this.mobileScale = this.isMobile ? 1.5 : 1;
         
         // Game states
         this.gameState = 'splash'; // 'splash', 'playing', 'paused'
@@ -22,16 +28,16 @@ class AirplaneGame {
         this.startButton = {
             x: this.gameWidth / 6 - 85,    // Fine-tuned positioning under title center
             y: this.gameHeight / 2 + 100, // Lower middle area
-            width: 200,
-            height: 60,
+            width: 200 * this.mobileScale,  // Larger for mobile
+            height: 60 * this.mobileScale,  // Larger for mobile
             hovered: false
         };
         
         this.exitButton = {
             x: this.gameWidth / 6 - 85,    // Same X as start button
             y: this.gameHeight / 2 + 180, // Below start button
-            width: 200,
-            height: 60,
+            width: 200 * this.mobileScale,  // Larger for mobile
+            height: 60 * this.mobileScale,  // Larger for mobile
             hovered: false
         };
         
@@ -205,14 +211,14 @@ class AirplaneGame {
         spriteCtx.fillStyle = gradient;
         spriteCtx.fillRect(0, 0, this.gameWidth, this.gameHeight);
         
-        // Add title
+        // Add title with mobile scaling
         spriteCtx.fillStyle = '#00ff00';
-        spriteCtx.font = 'bold 48px Courier New';
+        spriteCtx.font = `bold ${48 * this.mobileScale}px Courier New`;
         spriteCtx.textAlign = 'center';
-        spriteCtx.fillText('NUCLEAR STRIKE', this.gameWidth / 2, this.gameHeight / 2 - 100);
+        spriteCtx.fillText('NUCLEAR STRIKE', this.gameWidth / 2, this.gameHeight / 2 - 100 * this.mobileScale);
         
-        spriteCtx.font = 'bold 24px Courier New';
-        spriteCtx.fillText('AIRPLANE MISSION', this.gameWidth / 2, this.gameHeight / 2 - 50);
+        spriteCtx.font = `bold ${24 * this.mobileScale}px Courier New`;
+        spriteCtx.fillText('AIRPLANE MISSION', this.gameWidth / 2, this.gameHeight / 2 - 50 * this.mobileScale);
         
         this.splashImage = spriteCanvas;
     }
@@ -229,14 +235,14 @@ class AirplaneGame {
         
         // Button border
         spriteCtx.strokeStyle = '#00ff00';
-        spriteCtx.lineWidth = 3;
+        spriteCtx.lineWidth = 3 * this.mobileScale;
         spriteCtx.strokeRect(0, 0, this.startButton.width, this.startButton.height);
         
         // Button text
         spriteCtx.fillStyle = '#00ff00';
-        spriteCtx.font = 'bold 24px Courier New';
+        spriteCtx.font = `bold ${24 * this.mobileScale}px Courier New`;
         spriteCtx.textAlign = 'center';
-        spriteCtx.fillText('START GAME', this.startButton.width / 2, this.startButton.height / 2 + 8);
+        spriteCtx.fillText('START GAME', this.startButton.width / 2, this.startButton.height / 2 + 8 * this.mobileScale);
         
         this.startButtonImage = spriteCanvas;
     }
@@ -253,14 +259,13 @@ class AirplaneGame {
         
         // Button border
         spriteCtx.strokeStyle = '#ff0000';
-        spriteCtx.lineWidth = 3;
+        spriteCtx.lineWidth = 3 * this.mobileScale;
         spriteCtx.strokeRect(0, 0, this.exitButton.width, this.exitButton.height);
         
         // Button text
         spriteCtx.fillStyle = '#ff0000';
-        spriteCtx.font = 'bold 24px Courier New';
-        spriteCtx.textAlign = 'center';
-        spriteCtx.fillText('EXIT', this.exitButton.width / 2, this.exitButton.height / 2 + 8);
+        spriteCtx.font = `bold ${24 * this.mobileScale}px Courier New`;
+        spriteCtx.fillText('EXIT', this.exitButton.width / 2, this.exitButton.height / 2 + 8 * this.mobileScale);
         
         this.exitButtonImage = spriteCanvas;
     }
@@ -409,6 +414,7 @@ class AirplaneGame {
     }
     
     setupEventListeners() {
+        // Existing keyboard controls
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
             
@@ -446,6 +452,64 @@ class AirplaneGame {
                 this.handleSplashClick();
             }
         });
+
+        // Touch events for mobile only
+        if (this.isMobile) {
+            let touchStartX = 0;
+            let touchStartY = 0;
+            const minSwipeDistance = 30; // Minimum distance for a swipe
+
+            this.canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // Prevent scrolling
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+
+                // Handle shooting on tap
+                if (this.gameState === 'playing') {
+                    this.shootRocket();
+                }
+            });
+
+            this.canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault(); // Prevent scrolling
+                if (this.gameState !== 'playing') return;
+
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                const deltaX = touchX - touchStartX;
+                const deltaY = touchY - touchStartY;
+
+                // Only handle horizontal movement
+                if (Math.abs(deltaX) > minSwipeDistance) {
+                    // Move airplane based on swipe direction
+                    if (deltaX > 0) {
+                        // Swipe right
+                        this.airplane.x = Math.min(this.airplane.x + this.airplane.speed * 2, 
+                            this.gameWidth - this.airplane.width);
+                    } else {
+                        // Swipe left
+                        this.airplane.x = Math.max(this.airplane.x - this.airplane.speed * 2, 0);
+                    }
+                    touchStartX = touchX; // Update start position for continuous movement
+                }
+            });
+
+            // Handle splash screen touch
+            this.canvas.addEventListener('touchmove', (e) => {
+                if (this.gameState === 'splash') {
+                    const rect = this.canvas.getBoundingClientRect();
+                    this.mousePos.x = e.touches[0].clientX - rect.left;
+                    this.mousePos.y = e.touches[0].clientY - rect.top;
+                    this.updateButtonHover();
+                }
+            });
+
+            this.canvas.addEventListener('touchend', (e) => {
+                if (this.gameState === 'splash') {
+                    this.handleSplashClick();
+                }
+            });
+        }
     }
     
     updateButtonHover() {
@@ -915,22 +979,23 @@ class AirplaneGame {
     drawUI() {
         // Draw simplified scoreboard with dark background
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        this.ctx.fillRect(10, 10, 120, 40);
+        this.ctx.fillRect(10, 10, 120 * this.mobileScale, 40 * this.mobileScale);
         this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(10, 10, 120, 40);
+        this.ctx.lineWidth = 1 * this.mobileScale;
+        this.ctx.strokeRect(10, 10, 120 * this.mobileScale, 40 * this.mobileScale);
         
         // Draw only the score
         this.ctx.fillStyle = 'rgba(0, 255, 0, 0.9)';
-        this.ctx.font = '16px Courier New';
-        this.ctx.fillText(`SCORE: ${this.score}`, 20, 35);
+        this.ctx.font = `${16 * this.mobileScale}px Courier New`;
+        this.ctx.fillText(`SCORE: ${this.score}`, 20 * this.mobileScale, 35 * this.mobileScale);
         
         // Show loading progress if still loading
         if (!this.assetsLoaded) {
             this.ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
-            this.ctx.font = '16px Courier New';
+            this.ctx.font = `${16 * this.mobileScale}px Courier New`;
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(`Loading... ${this.loadingAssets}/${this.totalAssets}`, this.gameWidth / 2, this.gameHeight / 2 + 30);
+            this.ctx.fillText(`Loading... ${this.loadingAssets}/${this.totalAssets}`, 
+                this.gameWidth / 2, this.gameHeight / 2 + 30 * this.mobileScale);
             this.ctx.textAlign = 'left';
         }
     }
