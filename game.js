@@ -9,12 +9,20 @@ class AirplaneGame {
         // Check if device is mobile
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
+        // Adjust canvas size for mobile (vertical orientation)
+        if (this.isMobile) {
+            this.canvas.width = Math.min(400, window.innerWidth - 20);
+            this.canvas.height = Math.min(700, window.innerHeight - 20);
+            // Add mobile-specific styling
+            this.canvas.style.maxWidth = '100vw';
+            this.canvas.style.maxHeight = '100vh';
+            this.canvas.style.display = 'block';
+            this.canvas.style.margin = '0 auto';
+        }
+        
         // Game settings
         this.gameWidth = this.canvas.width;
         this.gameHeight = this.canvas.height;
-        
-        // Mobile UI scaling factor
-        this.mobileScale = this.isMobile ? 1.5 : 1;
         
         // Game states
         this.gameState = 'splash'; // 'splash', 'playing', 'paused'
@@ -24,32 +32,63 @@ class AirplaneGame {
         this.startButtonImage = null;
         this.exitButtonImage = null;
         
-        // Button properties - positioned to align with title
-        this.startButton = {
-            x: this.gameWidth / 6 - 85,    // Fine-tuned positioning under title center
-            y: this.gameHeight / 2 + 100, // Lower middle area
-            width: 200 * this.mobileScale,  // Larger for mobile
-            height: 60 * this.mobileScale,  // Larger for mobile
-            hovered: false
-        };
+        // Button properties - adjust for mobile vs desktop
+        if (this.isMobile) {
+            // Mobile vertical layout - center buttons
+            this.startButton = {
+                x: this.gameWidth / 2 - 100,
+                y: this.gameHeight / 2 + 80,
+                width: 200,
+                height: 60,
+                hovered: false
+            };
+            
+            this.exitButton = {
+                x: this.gameWidth / 2 - 100,
+                y: this.gameHeight / 2 + 160,
+                width: 200,
+                height: 60,
+                hovered: false
+            };
+        } else {
+            // Desktop layout (original positioning)
+            this.startButton = {
+                x: this.gameWidth / 6 - 85,
+                y: this.gameHeight / 2 + 100,
+                width: 200,
+                height: 60,
+                hovered: false
+            };
+            
+            this.exitButton = {
+                x: this.gameWidth / 6 - 85,
+                y: this.gameHeight / 2 + 180,
+                width: 200,
+                height: 60,
+                hovered: false
+            };
+        }
         
-        this.exitButton = {
-            x: this.gameWidth / 6 - 85,    // Same X as start button
-            y: this.gameHeight / 2 + 180, // Below start button
-            width: 200 * this.mobileScale,  // Larger for mobile
-            height: 60 * this.mobileScale,  // Larger for mobile
-            hovered: false
-        };
-        
-        // Airplane properties
-        this.airplane = {
-            x: this.gameWidth / 2 - 75 * 0.85, // Center horizontally for new size
-            y: this.gameHeight - 170,    // Moved lower (was -200)
-            width: 150 * 0.85,           // 3/4 of previous width
-            height: 175 * 0.85,          // 3/4 of previous height
-            speed: 5,
-            image: null
-        };
+        // Airplane properties - adjust for mobile
+        if (this.isMobile) {
+            this.airplane = {
+                x: this.gameWidth / 2 - 50,
+                y: this.gameHeight - 120,
+                width: 100,
+                height: 120,
+                speed: 4,
+                image: null
+            };
+        } else {
+            this.airplane = {
+                x: this.gameWidth / 2 - 75 * 0.85,
+                y: this.gameHeight - 170,
+                width: 150 * 0.85,
+                height: 175 * 0.85,
+                speed: 5,
+                image: null
+            };
+        }
         
         // Rocket properties
         this.rockets = [];
@@ -211,14 +250,34 @@ class AirplaneGame {
         spriteCtx.fillStyle = gradient;
         spriteCtx.fillRect(0, 0, this.gameWidth, this.gameHeight);
         
-        // Add title with mobile scaling
+        // Add title - adjust size for mobile
         spriteCtx.fillStyle = '#00ff00';
-        spriteCtx.font = `bold ${48 * this.mobileScale}px Courier New`;
-        spriteCtx.textAlign = 'center';
-        spriteCtx.fillText('NUCLEAR STRIKE', this.gameWidth / 2, this.gameHeight / 2 - 100 * this.mobileScale);
-        
-        spriteCtx.font = `bold ${24 * this.mobileScale}px Courier New`;
-        spriteCtx.fillText('AIRPLANE MISSION', this.gameWidth / 2, this.gameHeight / 2 - 50 * this.mobileScale);
+        if (this.isMobile) {
+            spriteCtx.font = 'bold 28px Courier New';
+            spriteCtx.textAlign = 'center';
+            spriteCtx.fillText('NUCLEAR STRIKE', this.gameWidth / 2, this.gameHeight / 2 - 150);
+            
+            spriteCtx.font = 'bold 18px Courier New';
+            spriteCtx.fillText('AIRPLANE MISSION', this.gameWidth / 2, this.gameHeight / 2 - 120);
+            
+            // Add mobile instructions
+            spriteCtx.fillStyle = '#ffff00';
+            spriteCtx.font = 'bold 14px Courier New';
+            spriteCtx.fillText('MOBILE CONTROLS:', this.gameWidth / 2, this.gameHeight / 2 - 60);
+            
+            spriteCtx.font = '12px Courier New';
+            spriteCtx.fillStyle = '#ffffff';
+            spriteCtx.fillText('• TAP to shoot missiles', this.gameWidth / 2, this.gameHeight / 2 - 40);
+            spriteCtx.fillText('• SWIPE LEFT/RIGHT to move', this.gameWidth / 2, this.gameHeight / 2 - 25);
+            spriteCtx.fillText('• Hit reactors twice to destroy', this.gameWidth / 2, this.gameHeight / 2 - 10);
+        } else {
+            spriteCtx.font = 'bold 48px Courier New';
+            spriteCtx.textAlign = 'center';
+            spriteCtx.fillText('NUCLEAR STRIKE', this.gameWidth / 2, this.gameHeight / 2 - 100);
+            
+            spriteCtx.font = 'bold 24px Courier New';
+            spriteCtx.fillText('AIRPLANE MISSION', this.gameWidth / 2, this.gameHeight / 2 - 50);
+        }
         
         this.splashImage = spriteCanvas;
     }
@@ -235,14 +294,14 @@ class AirplaneGame {
         
         // Button border
         spriteCtx.strokeStyle = '#00ff00';
-        spriteCtx.lineWidth = 3 * this.mobileScale;
+        spriteCtx.lineWidth = 3;
         spriteCtx.strokeRect(0, 0, this.startButton.width, this.startButton.height);
         
         // Button text
         spriteCtx.fillStyle = '#00ff00';
-        spriteCtx.font = `bold ${24 * this.mobileScale}px Courier New`;
+        spriteCtx.font = 'bold 24px Courier New';
         spriteCtx.textAlign = 'center';
-        spriteCtx.fillText('START GAME', this.startButton.width / 2, this.startButton.height / 2 + 8 * this.mobileScale);
+        spriteCtx.fillText('START GAME', this.startButton.width / 2, this.startButton.height / 2 + 8);
         
         this.startButtonImage = spriteCanvas;
     }
@@ -259,121 +318,133 @@ class AirplaneGame {
         
         // Button border
         spriteCtx.strokeStyle = '#ff0000';
-        spriteCtx.lineWidth = 3 * this.mobileScale;
+        spriteCtx.lineWidth = 3;
         spriteCtx.strokeRect(0, 0, this.exitButton.width, this.exitButton.height);
         
         // Button text
         spriteCtx.fillStyle = '#ff0000';
-        spriteCtx.font = `bold ${24 * this.mobileScale}px Courier New`;
-        spriteCtx.fillText('EXIT', this.exitButton.width / 2, this.exitButton.height / 2 + 8 * this.mobileScale);
+        spriteCtx.font = 'bold 24px Courier New';
+        spriteCtx.textAlign = 'center';
+        spriteCtx.fillText('EXIT', this.exitButton.width / 2, this.exitButton.height / 2 + 8);
         
         this.exitButtonImage = spriteCanvas;
     }
     
     createAirplaneSprite() {
-        // Fallback airplane sprite creation (same as before)
+        // Fallback airplane sprite creation - scale for mobile
         const spriteCanvas = document.createElement('canvas');
         spriteCanvas.width = this.airplane.width;
         spriteCanvas.height = this.airplane.height;
         const spriteCtx = spriteCanvas.getContext('2d');
         
+        // Scale factor for mobile
+        const scale = this.isMobile ? 0.7 : 1;
+        const offsetX = this.isMobile ? this.airplane.width * 0.15 : 0;
+        const offsetY = this.isMobile ? this.airplane.height * 0.1 : 0;
+        
         // Draw airplane body (main fuselage)
         spriteCtx.fillStyle = '#888888';
-        spriteCtx.fillRect(20, 10, 10, 40);
+        spriteCtx.fillRect(20 * scale + offsetX, 10 * scale + offsetY, 10 * scale, 40 * scale);
         
         // Draw wings
         spriteCtx.fillStyle = '#666666';
-        spriteCtx.fillRect(5, 25, 40, 8);
+        spriteCtx.fillRect(5 * scale + offsetX, 25 * scale + offsetY, 40 * scale, 8 * scale);
         
         // Draw nose
         spriteCtx.fillStyle = '#aaaaaa';
         spriteCtx.beginPath();
-        spriteCtx.moveTo(25, 10);
-        spriteCtx.lineTo(20, 0);
-        spriteCtx.lineTo(30, 0);
+        spriteCtx.moveTo(25 * scale + offsetX, 10 * scale + offsetY);
+        spriteCtx.lineTo(20 * scale + offsetX, 0 * scale + offsetY);
+        spriteCtx.lineTo(30 * scale + offsetX, 0 * scale + offsetY);
         spriteCtx.closePath();
         spriteCtx.fill();
         
         // Draw tail
         spriteCtx.fillStyle = '#666666';
-        spriteCtx.fillRect(18, 45, 14, 8);
+        spriteCtx.fillRect(18 * scale + offsetX, 45 * scale + offsetY, 14 * scale, 8 * scale);
         
         // Add some details (engines)
         spriteCtx.fillStyle = '#444444';
-        spriteCtx.fillRect(12, 28, 4, 4);
-        spriteCtx.fillRect(34, 28, 4, 4);
+        spriteCtx.fillRect(12 * scale + offsetX, 28 * scale + offsetY, 4 * scale, 4 * scale);
+        spriteCtx.fillRect(34 * scale + offsetX, 28 * scale + offsetY, 4 * scale, 4 * scale);
         
         this.airplane.image = spriteCanvas;
     }
     
     createReactorSprite() {
-        // Create fallback reactor sprite
+        // Create fallback reactor sprite - adjust size for mobile
+        const size = this.isMobile ? 80 : 120 * 1.3;
+        const scale = this.isMobile ? 0.7 : 1.3;
+        
         const spriteCanvas = document.createElement('canvas');
-        spriteCanvas.width = 120 * 1.3; // 1.3x larger
-        spriteCanvas.height = 120 * 1.3; // 1.3x larger
+        spriteCanvas.width = size;
+        spriteCanvas.height = size;
         const spriteCtx = spriteCanvas.getContext('2d');
         
-        // Draw reactor building base (scaled up)
+        // Draw reactor building base
         spriteCtx.fillStyle = '#444444';
-        spriteCtx.fillRect(20 * 1.3, 60 * 1.3, 80 * 1.3, 50 * 1.3); // 1.3x larger
+        spriteCtx.fillRect(20 * scale, 60 * scale, 80 * scale, 50 * scale);
         
-        // Draw cooling towers (scaled up)
+        // Draw cooling towers
         spriteCtx.fillStyle = '#666666';
-        spriteCtx.fillRect(30 * 1.3, 20 * 1.3, 24 * 1.3, 60 * 1.3); // 1.3x larger
-        spriteCtx.fillRect(66 * 1.3, 20 * 1.3, 24 * 1.3, 60 * 1.3); // 1.3x larger
+        spriteCtx.fillRect(30 * scale, 20 * scale, 24 * scale, 60 * scale);
+        spriteCtx.fillRect(66 * scale, 20 * scale, 24 * scale, 60 * scale);
         
-        // Draw reactor core (glowing center, scaled up)
+        // Draw reactor core (glowing center)
         spriteCtx.fillStyle = '#ff4444';
-        spriteCtx.fillRect(50 * 1.3, 70 * 1.3, 20 * 1.3, 20 * 1.3); // 1.3x larger
+        spriteCtx.fillRect(50 * scale, 70 * scale, 20 * scale, 20 * scale);
         
-        // Add glow effect (scaled up)
+        // Add glow effect
         spriteCtx.fillStyle = '#ff6666';
-        spriteCtx.fillRect(54 * 1.3, 74 * 1.3, 12 * 1.3, 12 * 1.3); // 1.3x larger
+        spriteCtx.fillRect(54 * scale, 74 * scale, 12 * scale, 12 * scale);
         
-        // Add warning stripes (scaled up)
+        // Add warning stripes
         spriteCtx.fillStyle = '#ffff00';
         for (let i = 0; i < 3; i++) {
-            spriteCtx.fillRect((24 + i * 16) * 1.3, 100 * 1.3, 8 * 1.3, 4 * 1.3); // 1.3x larger
+            spriteCtx.fillRect((24 + i * 16) * scale, 100 * scale, 8 * scale, 4 * scale);
         }
         
         this.reactorImage = spriteCanvas;
     }
     
     createDamagedReactorSprite() {
-        // Create fallback damaged reactor sprite
+        // Create fallback damaged reactor sprite - adjust size for mobile
+        const size = this.isMobile ? 80 : 120 * 1.3;
+        const scale = this.isMobile ? 0.7 : 1.3;
+        
         const spriteCanvas = document.createElement('canvas');
-        spriteCanvas.width = 120 * 1.3;  // 1.3x larger
-        spriteCanvas.height = 120 * 1.3; // 1.3x larger
+        spriteCanvas.width = size;
+        spriteCanvas.height = size;
         const spriteCtx = spriteCanvas.getContext('2d');
         
         // Draw damaged reactor building base
         spriteCtx.fillStyle = '#222222';
-        spriteCtx.fillRect(20 * 1.3, 60 * 1.3, 80 * 1.3, 50 * 1.3); // 1.3x larger
+        spriteCtx.fillRect(20 * scale, 60 * scale, 80 * scale, 50 * scale);
         
         // Draw damaged/cracked cooling towers
         spriteCtx.fillStyle = '#444444';
-        spriteCtx.fillRect(30 * 1.3, 20 * 1.3, 24 * 1.3, 60 * 1.3); // 1.3x larger
-        spriteCtx.fillRect(66 * 1.3, 20 * 1.3, 24 * 1.3, 60 * 1.3); // 1.3x larger
+        spriteCtx.fillRect(30 * scale, 20 * scale, 24 * scale, 60 * scale);
+        spriteCtx.fillRect(66 * scale, 20 * scale, 24 * scale, 60 * scale);
         
         // Add cracks
         spriteCtx.strokeStyle = '#111111';
-        spriteCtx.lineWidth = 2 * 1.3; // 1.3x larger
+        spriteCtx.lineWidth = 2 * scale;
         spriteCtx.beginPath();
-        spriteCtx.moveTo(35 * 1.3, 25 * 1.3);
-        spriteCtx.lineTo(45 * 1.3, 75 * 1.3);
-        spriteCtx.moveTo(70 * 1.3, 30 * 1.3);
-        spriteCtx.lineTo(80 * 1.3, 70 * 1.3);
+        spriteCtx.moveTo(35 * scale, 25 * scale);
+        spriteCtx.lineTo(45 * scale, 75 * scale);
+        spriteCtx.moveTo(70 * scale, 30 * scale);
+        spriteCtx.lineTo(80 * scale, 70 * scale);
         spriteCtx.stroke();
         
         // Draw damaged reactor core (dim)
         spriteCtx.fillStyle = '#664444';
-        spriteCtx.fillRect(50 * 1.3, 70 * 1.3, 20 * 1.3, 20 * 1.3); // 1.3x larger
+        spriteCtx.fillRect(50 * scale, 70 * scale, 20 * scale, 20 * scale);
         
         // Add smoke effect
         spriteCtx.fillStyle = 'rgba(100, 100, 100, 0.7)';
         for (let i = 0; i < 5; i++) {
             spriteCtx.beginPath();
-            spriteCtx.arc((60 + i * 8) * 1.3, (15 - i * 2) * 1.3, (3 + i) * 1.3, 0, Math.PI * 2);
+            spriteCtx.arc((60 + i * 8) * scale, (15 - i * 2) * scale, (3 + i) * scale, 0, Math.PI * 2);
             spriteCtx.fill();
         }
         
@@ -391,19 +462,23 @@ class AirplaneGame {
         let x;
         let attempts = 0;
         
+        // Adjust reactor size for mobile
+        const reactorSize = this.isMobile ? 80 : 120 * 1.3;
+        const spacing = this.isMobile ? 100 : 150 * 1.3;
+        
         // Try to find a good X position that doesn't overlap
         do {
-            x = Math.random() * (this.gameWidth - 120 * 1.3); // Account for larger size
+            x = Math.random() * (this.gameWidth - reactorSize);
             attempts++;
-        } while (Math.abs(x - this.lastReactorX) < 150 * 1.3 && attempts < 10); // Increased spacing for larger size
+        } while (Math.abs(x - this.lastReactorX) < spacing && attempts < 10);
         
         this.lastReactorX = x;
         
         const reactor = {
             x: x,
-            y: customY !== null ? customY : -120 * 1.3, // Account for larger size
-            width: 120 * 1.3,  // 1.3x larger
-            height: 120 * 1.3, // 1.3x larger
+            y: customY !== null ? customY : -reactorSize,
+            width: reactorSize,
+            height: reactorSize,
             speed: this.backgroundSpeed,
             destroyed: false,
             damaged: false,
@@ -977,25 +1052,43 @@ class AirplaneGame {
     }
     
     drawUI() {
+        // Adjust UI size for mobile
+        const uiWidth = this.isMobile ? 100 : 120;
+        const uiHeight = this.isMobile ? 35 : 40;
+        const fontSize = this.isMobile ? '14px' : '16px';
+        
         // Draw simplified scoreboard with dark background
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        this.ctx.fillRect(10, 10, 120 * this.mobileScale, 40 * this.mobileScale);
+        this.ctx.fillRect(10, 10, uiWidth, uiHeight);
         this.ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
-        this.ctx.lineWidth = 1 * this.mobileScale;
-        this.ctx.strokeRect(10, 10, 120 * this.mobileScale, 40 * this.mobileScale);
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(10, 10, uiWidth, uiHeight);
         
         // Draw only the score
         this.ctx.fillStyle = 'rgba(0, 255, 0, 0.9)';
-        this.ctx.font = `${16 * this.mobileScale}px Courier New`;
-        this.ctx.fillText(`SCORE: ${this.score}`, 20 * this.mobileScale, 35 * this.mobileScale);
+        this.ctx.font = `${fontSize} Courier New`;
+        this.ctx.fillText(`SCORE: ${this.score}`, 15, this.isMobile ? 30 : 35);
+        
+        // Add mobile controls reminder during gameplay
+        if (this.isMobile && this.gameState === 'playing') {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            this.ctx.fillRect(this.gameWidth - 110, 10, 100, 50);
+            this.ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
+            this.ctx.strokeRect(this.gameWidth - 110, 10, 100, 50);
+            
+            this.ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+            this.ctx.font = '10px Courier New';
+            this.ctx.fillText('TAP: Shoot', this.gameWidth - 105, 25);
+            this.ctx.fillText('SWIPE: Move', this.gameWidth - 105, 38);
+            this.ctx.fillText('ESC: Menu', this.gameWidth - 105, 51);
+        }
         
         // Show loading progress if still loading
         if (!this.assetsLoaded) {
             this.ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
-            this.ctx.font = `${16 * this.mobileScale}px Courier New`;
+            this.ctx.font = `${fontSize} Courier New`;
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(`Loading... ${this.loadingAssets}/${this.totalAssets}`, 
-                this.gameWidth / 2, this.gameHeight / 2 + 30 * this.mobileScale);
+            this.ctx.fillText(`Loading... ${this.loadingAssets}/${this.totalAssets}`, this.gameWidth / 2, this.gameHeight / 2 + 30);
             this.ctx.textAlign = 'left';
         }
     }
@@ -1014,9 +1107,14 @@ class AirplaneGame {
         this.shootCooldown = 0;
         this.canShoot = true;
         
-        // Reset airplane position
-        this.airplane.x = this.gameWidth / 2 - 75 * 0.75;
-        this.airplane.y = this.gameHeight - 150;
+        // Reset airplane position - adjust for mobile
+        if (this.isMobile) {
+            this.airplane.x = this.gameWidth / 2 - 50;
+            this.airplane.y = this.gameHeight - 120;
+        } else {
+            this.airplane.x = this.gameWidth / 2 - 75 * 0.85;
+            this.airplane.y = this.gameHeight - 170;
+        }
         
         console.log('Game reset complete');
     }

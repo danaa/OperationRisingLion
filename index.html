@@ -2,17 +2,35 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Airplane Nuclear Strike Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    <title>Operation Rising Lion</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div class="orientation-message">
+        <div class="orientation-content">
+            <div class="phone-icon">📱</div>
+            <h2>Please rotate your device</h2>
+            <p>This game is best played in landscape mode</p>
+        </div>
+    </div>
+    
     <div class="game-container">
         <canvas id="gameCanvas" width="1200" height="800"></canvas>
         <div class="game-ui">
             <div class="controls">
                 <p>Use ← → arrow keys to move</p>
                 <p>SPACEBAR to shoot rockets</p>
+            </div>
+            <div class="mobile-controls">
+                <p>📱 Touch controls:</p>
+                <p>• Tap to shoot rockets</p>
+                <p>• Swipe left/right to move</p>
+                <p>• Rotate to landscape mode</p>
             </div>
         </div>
     </div>

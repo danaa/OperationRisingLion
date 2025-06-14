@@ -12,6 +12,7 @@ body {
     min-height: 100vh;
     font-family: 'Courier New', monospace;
     color: #fff;
+    overflow: hidden; /* Prevent scrolling on mobile */
 }
 
 .game-container {
@@ -45,10 +46,60 @@ body {
     font-size: 12px;
     color: #00ff00;
     border: 1px solid rgba(0, 255, 0, 0.5);
+    display: block;
 }
 
-.controls p {
+.mobile-controls {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    color: #00ccff;
+    border: 1px solid rgba(0, 204, 255, 0.5);
+    margin-top: 10px;
+    display: none;
+}
+
+.controls p, .mobile-controls p {
     margin: 2px 0;
+}
+
+/* Orientation message for mobile */
+.orientation-message {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.orientation-content {
+    text-align: center;
+    color: #00ff00;
+    animation: pulse 2s infinite;
+}
+
+.phone-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+    transform: rotate(90deg);
+    animation: rotate 2s ease-in-out infinite alternate;
+}
+
+.orientation-content h2 {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.orientation-content p {
+    font-size: 16px;
+    opacity: 0.8;
 }
 
 /* Loading animation for assets */
@@ -69,4 +120,94 @@ body {
 .loading::after {
     content: '...';
     animation: blink 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+@keyframes rotate {
+    0% { transform: rotate(90deg); }
+    100% { transform: rotate(0deg); }
+}
+
+/* Mobile specific styles */
+@media screen and (max-width: 768px) {
+    body {
+        padding: 0;
+        margin: 0;
+    }
+    
+    .game-container {
+        border: none;
+        border-radius: 0;
+        width: 100vw;
+        height: 100vh;
+    }
+    
+    #gameCanvas {
+        width: 100vw !important;
+        height: 100vh !important;
+        object-fit: contain;
+    }
+    
+    .controls {
+        display: none;
+    }
+    
+    .mobile-controls {
+        display: block;
+        font-size: 11px;
+        padding: 8px;
+        bottom: 5px;
+        right: 5px;
+    }
+    
+    .game-ui {
+        bottom: 5px;
+        right: 5px;
+    }
+}
+
+/* Portrait orientation on mobile - show rotation message */
+@media screen and (max-width: 768px) and (orientation: portrait) {
+    .orientation-message {
+        display: flex !important;
+    }
+    
+    .game-container {
+        display: none;
+    }
+}
+
+/* Landscape orientation on mobile - hide rotation message */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+    .orientation-message {
+        display: none !important;
+    }
+    
+    .game-container {
+        display: block;
+    }
+    
+    #gameCanvas {
+        width: 100vw !important;
+        height: 100vh !important;
+    }
+}
+
+/* Tablet and larger screens */
+@media screen and (min-width: 769px) {
+    .orientation-message {
+        display: none !important;
+    }
+    
+    .mobile-controls {
+        display: none;
+    }
+    
+    .controls {
+        display: block;
+    }
 } 
