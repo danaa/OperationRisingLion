@@ -22,29 +22,9 @@ class AirplaneGame {
         
         // Adjust canvas size for mobile (vertical orientation)
         if (this.isMobile) {
-            // Force mobile to use full available space with proper aspect ratio
-            const screenWidth = Math.min(window.innerWidth, window.screen.width);
-            const screenHeight = Math.min(window.innerHeight, window.screen.height);
-            
-            // Set canvas to use most of the screen in portrait mode
-            this.canvas.width = Math.min(400, screenWidth - 40);
-            this.canvas.height = Math.min(700, screenHeight - 100);
-            
-            // Ensure minimum size for mobile
-            if (this.canvas.width < 300) this.canvas.width = 300;
-            if (this.canvas.height < 500) this.canvas.height = 500;
-            
-            // Add mobile-specific styling
-            this.canvas.style.width = this.canvas.width + 'px';
-            this.canvas.style.height = this.canvas.height + 'px';
-            this.canvas.style.maxWidth = '100vw';
-            this.canvas.style.maxHeight = '100vh';
-            this.canvas.style.display = 'block';
-            this.canvas.style.margin = '10px auto';
-            this.canvas.style.border = '2px solid #00ff00';
-            this.canvas.style.borderRadius = '10px';
-            
-            console.log(`Mobile canvas size: ${this.canvas.width}x${this.canvas.height}`);
+            // Initialize mobile fullscreen
+            this.isFullscreen = false;
+            this.setupMobileFullscreen();
         }
         
         // Game settings
@@ -58,6 +38,7 @@ class AirplaneGame {
         this.splashImage = null;
         this.startButtonImage = null;
         this.exitButtonImage = null;
+        this.fullscreenButtonImage = null;
         
         // Button properties - adjust for mobile vs desktop
         if (this.isMobile) {
@@ -81,7 +62,16 @@ class AirplaneGame {
                 hovered: false
             };
             
-            console.log(`Mobile buttons positioned at: start=(${this.startButton.x}, ${this.startButton.y}), exit=(${this.exitButton.x}, ${this.exitButton.y})`);
+            // Add fullscreen button for mobile
+            this.fullscreenButton = {
+                x: (this.gameWidth - buttonWidth) / 2,
+                y: this.gameHeight / 2 + 220,
+                width: buttonWidth,
+                height: buttonHeight,
+                hovered: false
+            };
+            
+            console.log(`Mobile buttons positioned at: start=(${this.startButton.x}, ${this.startButton.y}), exit=(${this.exitButton.x}, ${this.exitButton.y}), fullscreen=(${this.fullscreenButton.x}, ${this.fullscreenButton.y})`);
         } else {
             // Desktop layout (original positioning)
             this.startButton = {
@@ -169,6 +159,149 @@ class AirplaneGame {
         this.initializeReactors();
     }
     
+    setupMobileFullscreen() {
+        // Set initial canvas size for mobile
+        this.resizeMobileCanvas();
+        
+        // Add fullscreen change event listeners
+        document.addEventListener('fullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('webkitfullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('mozfullscreenchange', () => this.handleFullscreenChange());
+        document.addEventListener('MSFullscreenChange', () => this.handleFullscreenChange());
+        
+        // Handle orientation changes
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.resizeMobileCanvas(), 500);
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (this.isMobile) {
+                setTimeout(() => this.resizeMobileCanvas(), 100);
+            }
+        });
+        
+        // Auto-request fullscreen on first user interaction
+        this.autoFullscreenRequested = false;
+    }
+    
+    resizeMobileCanvas() {
+        if (!this.isMobile) return;
+        
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        
+        if (this.isFullscreen || document.fullscreenElement) {
+            // True fullscreen mode
+            this.canvas.width = screenWidth;
+            this.canvas.height = screenHeight;
+            
+            // Fullscreen styling
+            this.canvas.style.position = 'fixed';
+            this.canvas.style.top = '0';
+            this.canvas.style.left = '0';
+            this.canvas.style.width = '100vw';
+            this.canvas.style.height = '100vh';
+            this.canvas.style.margin = '0';
+            this.canvas.style.border = 'none';
+            this.canvas.style.borderRadius = '0';
+            this.canvas.style.zIndex = '9999';
+            
+        } else {
+            // Windowed mode - use most of the screen
+            this.canvas.width = Math.min(400, screenWidth - 20);
+            this.canvas.height = Math.min(700, screenHeight - 60);
+            
+            // Ensure minimum size
+            if (this.canvas.width < 300) this.canvas.width = 300;
+            if (this.canvas.height < 500) this.canvas.height = 500;
+            
+            // Windowed styling
+            this.canvas.style.position = 'relative';
+            this.canvas.style.width = this.canvas.width + 'px';
+            this.canvas.style.height = this.canvas.height + 'px';
+            this.canvas.style.maxWidth = '100vw';
+            this.canvas.style.maxHeight = '100vh';
+            this.canvas.style.display = 'block';
+            this.canvas.style.margin = '10px auto';
+            this.canvas.style.border = '2px solid #00ff00';
+            this.canvas.style.borderRadius = '10px';
+            this.canvas.style.zIndex = 'auto';
+        }
+        
+        // Update game dimensions
+        this.gameWidth = this.canvas.width;
+        this.gameHeight = this.canvas.height;
+        
+        // Recalculate button positions
+        this.updateButtonPositions();
+        
+        console.log(`Mobile canvas resized: ${this.canvas.width}x${this.canvas.height}, fullscreen: ${this.isFullscreen}`);
+    }
+    
+    updateButtonPositions() {
+        if (!this.isMobile) return;
+        
+        const buttonWidth = Math.min(200, this.gameWidth - 40);
+        const buttonHeight = 60;
+        
+        this.startButton.x = (this.gameWidth - buttonWidth) / 2;
+        this.startButton.y = this.gameHeight / 2 + 60;
+        this.startButton.width = buttonWidth;
+        this.startButton.height = buttonHeight;
+        
+        this.exitButton.x = (this.gameWidth - buttonWidth) / 2;
+        this.exitButton.y = this.gameHeight / 2 + 140;
+        this.exitButton.width = buttonWidth;
+        this.exitButton.height = buttonHeight;
+        
+        // Update fullscreen button position
+        if (this.fullscreenButton) {
+            this.fullscreenButton.x = (this.gameWidth - buttonWidth) / 2;
+            this.fullscreenButton.y = this.gameHeight / 2 + 220;
+            this.fullscreenButton.width = buttonWidth;
+            this.fullscreenButton.height = buttonHeight;
+        }
+        
+        // Update airplane position for new canvas size
+        this.airplane.x = this.gameWidth / 2 - 50;
+        this.airplane.y = this.gameHeight - 120;
+    }
+    
+    handleFullscreenChange() {
+        this.isFullscreen = !!(document.fullscreenElement || 
+                              document.webkitFullscreenElement || 
+                              document.mozFullScreenElement || 
+                              document.msFullscreenElement);
+        
+        console.log(`Fullscreen changed: ${this.isFullscreen}`);
+        
+        // Resize canvas when fullscreen state changes
+        setTimeout(() => this.resizeMobileCanvas(), 100);
+    }
+    
+    async requestMobileFullscreen() {
+        if (!this.isMobile || this.isFullscreen) return;
+        
+        try {
+            const element = document.documentElement;
+            
+            if (element.requestFullscreen) {
+                await element.requestFullscreen();
+            } else if (element.webkitRequestFullscreen) {
+                await element.webkitRequestFullscreen();
+            } else if (element.mozRequestFullScreen) {
+                await element.mozRequestFullScreen();
+            } else if (element.msRequestFullscreen) {
+                await element.msRequestFullscreen();
+            }
+            
+            console.log('Fullscreen requested successfully');
+        } catch (err) {
+            console.warn('Fullscreen request failed:', err);
+        }
+    }
+    
     showLoadingScreen() {
         this.ctx.fillStyle = '#000';
         this.ctx.fillRect(0, 0, this.gameWidth, this.gameHeight);
@@ -243,6 +376,9 @@ class AirplaneGame {
         } else if (key === 'exit_button') {
             console.log('Creating fallback exit button');
             this.createExitButton();
+        } else if (key === 'fullscreen_button' && this.isMobile) {
+            console.log('Creating fallback fullscreen button');
+            this.createFullscreenButton();
         } else if (key === 'airplane') {
             console.log('Creating fallback airplane sprite');
             this.createAirplaneSprite();
@@ -362,6 +498,35 @@ class AirplaneGame {
         spriteCtx.fillText('EXIT', this.exitButton.width / 2, this.exitButton.height / 2 + 8);
         
         this.exitButtonImage = spriteCanvas;
+    }
+    
+    createFullscreenButton() {
+        if (!this.isMobile) return;
+        
+        const spriteCanvas = document.createElement('canvas');
+        spriteCanvas.width = this.fullscreenButton.width;
+        spriteCanvas.height = this.fullscreenButton.height;
+        const spriteCtx = spriteCanvas.getContext('2d');
+        
+        // Button background - blue for fullscreen
+        spriteCtx.fillStyle = '#000066';
+        spriteCtx.fillRect(0, 0, this.fullscreenButton.width, this.fullscreenButton.height);
+        
+        // Button border
+        spriteCtx.strokeStyle = '#0066ff';
+        spriteCtx.lineWidth = 4;
+        spriteCtx.strokeRect(0, 0, this.fullscreenButton.width, this.fullscreenButton.height);
+        
+        // Button text
+        spriteCtx.fillStyle = '#0066ff';
+        const fontSize = Math.min(18, this.fullscreenButton.width / 12);
+        spriteCtx.font = `bold ${fontSize}px Courier New`;
+        spriteCtx.textAlign = 'center';
+        
+        const text = this.isFullscreen ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
+        spriteCtx.fillText(text, this.fullscreenButton.width / 2, this.fullscreenButton.height / 2 + 8);
+        
+        this.fullscreenButtonImage = spriteCanvas;
     }
     
     createAirplaneSprite() {
@@ -573,6 +738,12 @@ class AirplaneGame {
                 e.preventDefault(); // Prevent scrolling
                 isTouching = true;
                 
+                // Auto-request fullscreen on first touch
+                if (!this.autoFullscreenRequested) {
+                    this.autoFullscreenRequested = true;
+                    this.requestMobileFullscreen();
+                }
+                
                 const rect = this.canvas.getBoundingClientRect();
                 touchStartX = e.touches[0].clientX;
                 touchStartY = e.touches[0].clientY;
@@ -657,8 +828,15 @@ class AirplaneGame {
         // Check exit button hover
         this.exitButton.hovered = this.isPointInButton(this.mousePos, this.exitButton);
         
+        // Check fullscreen button hover (mobile only)
+        if (this.isMobile && this.fullscreenButton) {
+            this.fullscreenButton.hovered = this.isPointInButton(this.mousePos, this.fullscreenButton);
+        }
+        
         // Change cursor style
-        this.canvas.style.cursor = (this.startButton.hovered || this.exitButton.hovered) ? 'pointer' : 'default';
+        const anyButtonHovered = this.startButton.hovered || this.exitButton.hovered || 
+                                (this.isMobile && this.fullscreenButton && this.fullscreenButton.hovered);
+        this.canvas.style.cursor = anyButtonHovered ? 'pointer' : 'default';
     }
     
     isPointInButton(point, button) {
@@ -678,6 +856,30 @@ class AirplaneGame {
             // For web, we'll just show an alert
             alert('Thanks for playing!');
             console.log('Exit button clicked');
+        } else if (this.isMobile && this.fullscreenButton && this.fullscreenButton.hovered) {
+            // Toggle fullscreen
+            if (this.isFullscreen) {
+                this.exitFullscreen();
+            } else {
+                this.requestMobileFullscreen();
+            }
+            console.log('Fullscreen button clicked');
+        }
+    }
+    
+    exitFullscreen() {
+        try {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        } catch (err) {
+            console.warn('Exit fullscreen failed:', err);
         }
     }
     
@@ -916,6 +1118,31 @@ class AirplaneGame {
                 this.exitButton.y,
                 this.exitButton.width,
                 this.exitButton.height
+            );
+            
+            this.ctx.shadowBlur = 0;
+        }
+        
+        // Draw fullscreen button (mobile only)
+        if (this.isMobile && this.fullscreenButton) {
+            // Recreate button if fullscreen state changed
+            if (this.lastFullscreenState !== this.isFullscreen) {
+                this.createFullscreenButton();
+                this.lastFullscreenState = this.isFullscreen;
+            }
+            
+            // Add glow effect if hovered
+            if (this.fullscreenButton.hovered) {
+                this.ctx.shadowColor = '#0066ff';
+                this.ctx.shadowBlur = 10;
+            }
+            
+            this.ctx.drawImage(
+                this.fullscreenButtonImage,
+                this.fullscreenButton.x,
+                this.fullscreenButton.y,
+                this.fullscreenButton.width,
+                this.fullscreenButton.height
             );
             
             this.ctx.shadowBlur = 0;
