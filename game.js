@@ -25,6 +25,12 @@ class AirplaneGame {
             // Initialize mobile fullscreen
             this.isFullscreen = false;
             this.setupMobileFullscreen();
+            
+            // Immediately try to optimize display
+            setTimeout(() => {
+                console.log('Initial mobile optimization...');
+                this.optimizeWindowedMode();
+            }, 1000);
         }
         
         // Game settings
@@ -181,8 +187,15 @@ class AirplaneGame {
             }
         });
         
+        // Alternative approach: hide browser UI by scrolling
+        if (this.isMobile) {
+            this.setupMobileBrowserUIHiding();
+        }
+        
         // Auto-request fullscreen on first user interaction
         this.autoFullscreenRequested = false;
+        this.fullscreenAttempts = 0;
+        this.maxFullscreenAttempts = 3;
     }
     
     resizeMobileCanvas() {
@@ -190,11 +203,16 @@ class AirplaneGame {
         
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
+        const visualViewportHeight = window.visualViewport ? window.visualViewport.height : screenHeight;
+        
+        console.log(`Screen: ${screenWidth}x${screenHeight}, Visual viewport: ${screenWidth}x${visualViewportHeight}`);
+        console.log(`Fullscreen element exists: ${!!document.fullscreenElement}`);
+        console.log(`IsFullscreen flag: ${this.isFullscreen}`);
         
         if (this.isFullscreen || document.fullscreenElement) {
             // True fullscreen mode
             this.canvas.width = screenWidth;
-            this.canvas.height = screenHeight;
+            this.canvas.height = visualViewportHeight;
             
             // Fullscreen styling
             this.canvas.style.position = 'fixed';
@@ -203,30 +221,50 @@ class AirplaneGame {
             this.canvas.style.width = '100vw';
             this.canvas.style.height = '100vh';
             this.canvas.style.margin = '0';
+            this.canvas.style.padding = '0';
             this.canvas.style.border = 'none';
             this.canvas.style.borderRadius = '0';
             this.canvas.style.zIndex = '9999';
+            this.canvas.style.background = '#000';
+            
+            // Hide browser UI elements
+            document.body.style.overflow = 'hidden';
             
         } else {
-            // Windowed mode - use most of the screen
-            this.canvas.width = Math.min(400, screenWidth - 20);
-            this.canvas.height = Math.min(700, screenHeight - 60);
+            // Windowed mode - maximize available space
+            const availableWidth = screenWidth;
+            const availableHeight = visualViewportHeight - 100; // Account for browser UI
             
-            // Ensure minimum size
-            if (this.canvas.width < 300) this.canvas.width = 300;
-            if (this.canvas.height < 500) this.canvas.height = 500;
+            // Use most of available space while maintaining aspect ratio
+            this.canvas.width = Math.min(availableWidth, 400);
+            this.canvas.height = Math.min(availableHeight, Math.floor(this.canvas.width * 1.6)); // 16:10 aspect ratio
             
-            // Windowed styling
+            // Ensure reasonable minimum size
+            if (this.canvas.width < 300) {
+                this.canvas.width = 300;
+                this.canvas.height = 480;
+            }
+            if (this.canvas.height < 400) {
+                this.canvas.height = 400;
+                this.canvas.width = Math.floor(this.canvas.height / 1.6);
+            }
+            
+            // Windowed styling - more aggressive sizing
             this.canvas.style.position = 'relative';
             this.canvas.style.width = this.canvas.width + 'px';
             this.canvas.style.height = this.canvas.height + 'px';
             this.canvas.style.maxWidth = '100vw';
             this.canvas.style.maxHeight = '100vh';
             this.canvas.style.display = 'block';
-            this.canvas.style.margin = '10px auto';
-            this.canvas.style.border = '2px solid #00ff00';
-            this.canvas.style.borderRadius = '10px';
+            this.canvas.style.margin = '5px auto';
+            this.canvas.style.padding = '0';
+            this.canvas.style.border = '1px solid #00ff00';
+            this.canvas.style.borderRadius = '5px';
             this.canvas.style.zIndex = 'auto';
+            this.canvas.style.background = '#000';
+            
+            // Restore body overflow
+            document.body.style.overflow = 'auto';
         }
         
         // Update game dimensions
@@ -269,37 +307,138 @@ class AirplaneGame {
     }
     
     handleFullscreenChange() {
+        const wasFullscreen = this.isFullscreen;
         this.isFullscreen = !!(document.fullscreenElement || 
                               document.webkitFullscreenElement || 
                               document.mozFullScreenElement || 
                               document.msFullscreenElement);
         
-        console.log(`Fullscreen changed: ${this.isFullscreen}`);
+        console.log(`Fullscreen changed: ${wasFullscreen} -> ${this.isFullscreen}`);
+        console.log(`Fullscreen elements:`, {
+            standard: !!document.fullscreenElement,
+            webkit: !!document.webkitFullscreenElement,
+            moz: !!document.mozFullScreenElement,
+            ms: !!document.msFullscreenElement
+        });
+        
+        // Recreate fullscreen button with updated text
+        if (this.isMobile && this.fullscreenButton) {
+            this.createFullscreenButton();
+        }
         
         // Resize canvas when fullscreen state changes
         setTimeout(() => this.resizeMobileCanvas(), 100);
+        setTimeout(() => this.resizeMobileCanvas(), 500); // Additional delay for iOS
     }
     
     async requestMobileFullscreen() {
-        if (!this.isMobile || this.isFullscreen) return;
+        if (!this.isMobile || this.isFullscreen || this.fullscreenAttempts >= this.maxFullscreenAttempts) return;
+        
+        this.fullscreenAttempts++;
+        console.log(`Attempting fullscreen (attempt ${this.fullscreenAttempts}/${this.maxFullscreenAttempts})`);
         
         try {
             const element = document.documentElement;
             
+            // Try multiple fullscreen APIs
             if (element.requestFullscreen) {
-                await element.requestFullscreen();
+                await element.requestFullscreen({ navigationUI: "hide" });
             } else if (element.webkitRequestFullscreen) {
                 await element.webkitRequestFullscreen();
+            } else if (element.webkitRequestFullScreen) {
+                await element.webkitRequestFullScreen();
             } else if (element.mozRequestFullScreen) {
                 await element.mozRequestFullScreen();
             } else if (element.msRequestFullscreen) {
                 await element.msRequestFullscreen();
+            } else {
+                throw new Error('Fullscreen API not supported');
             }
             
             console.log('Fullscreen requested successfully');
+            
+            // Force immediate resize
+            setTimeout(() => {
+                this.handleFullscreenChange();
+                this.resizeMobileCanvas();
+            }, 100);
+            
         } catch (err) {
-            console.warn('Fullscreen request failed:', err);
+            console.warn(`Fullscreen request failed (attempt ${this.fullscreenAttempts}):`, err);
+            
+            // If fullscreen fails, optimize windowed mode
+            if (this.fullscreenAttempts >= this.maxFullscreenAttempts) {
+                console.log('Max fullscreen attempts reached, optimizing windowed mode');
+                this.optimizeWindowedMode();
+            }
         }
+    }
+    
+    optimizeWindowedMode() {
+        // Make windowed mode look better when fullscreen fails
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        
+        // Use maximum available space
+        this.canvas.width = screenWidth - 10;
+        this.canvas.height = screenHeight - 150; // Account for browser UI
+        
+        // Ensure minimum playable size
+        if (this.canvas.height < 400) {
+            this.canvas.height = 400;
+        }
+        
+        // Apply optimized styling
+        this.canvas.style.position = 'fixed';
+        this.canvas.style.top = '50px';
+        this.canvas.style.left = '50%';
+        this.canvas.style.transform = 'translateX(-50%)';
+        this.canvas.style.width = this.canvas.width + 'px';
+        this.canvas.style.height = this.canvas.height + 'px';
+        this.canvas.style.border = '1px solid #00ff00';
+        this.canvas.style.borderRadius = '5px';
+        this.canvas.style.zIndex = '1000';
+        this.canvas.style.background = '#000';
+        
+        // Update game dimensions
+        this.gameWidth = this.canvas.width;
+        this.gameHeight = this.canvas.height;
+        this.updateButtonPositions();
+        
+        console.log(`Optimized windowed mode: ${this.canvas.width}x${this.canvas.height}`);
+    }
+    
+    setupMobileBrowserUIHiding() {
+        // Try to hide browser UI using scroll technique
+        const hideUI = () => {
+            // Scroll to top to hide address bar
+            window.scrollTo(0, 1);
+            
+            // Set body and html to be larger than viewport to enable scrolling
+            document.body.style.height = (window.innerHeight + 100) + 'px';
+            document.documentElement.style.height = (window.innerHeight + 100) + 'px';
+            
+            // Then scroll to hide the UI
+            setTimeout(() => {
+                window.scrollTo(0, 1);
+                this.resizeMobileCanvas();
+            }, 100);
+        };
+        
+        // Try to hide UI on various events
+        window.addEventListener('load', hideUI);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(hideUI, 500);
+        });
+        
+        // Also try on first touch if not already done
+        let uiHideAttempted = false;
+        document.addEventListener('touchstart', () => {
+            if (!uiHideAttempted) {
+                uiHideAttempted = true;
+                setTimeout(hideUI, 100);
+            }
+        });
     }
     
     showLoadingScreen() {
@@ -431,13 +570,18 @@ class AirplaneGame {
             // Add mobile instructions
             spriteCtx.fillStyle = '#ffff00';
             spriteCtx.font = 'bold 14px Courier New';
-            spriteCtx.fillText('MOBILE CONTROLS:', this.gameWidth / 2, this.gameHeight / 2 - 60);
+            spriteCtx.fillText('MOBILE CONTROLS:', this.gameWidth / 2, this.gameHeight / 2 - 80);
             
             spriteCtx.font = '12px Courier New';
             spriteCtx.fillStyle = '#ffffff';
-            spriteCtx.fillText('• TAP to shoot missiles', this.gameWidth / 2, this.gameHeight / 2 - 40);
-            spriteCtx.fillText('• SWIPE LEFT/RIGHT to move', this.gameWidth / 2, this.gameHeight / 2 - 25);
-            spriteCtx.fillText('• Hit reactors twice to destroy', this.gameWidth / 2, this.gameHeight / 2 - 10);
+            spriteCtx.fillText('• TAP to shoot missiles', this.gameWidth / 2, this.gameHeight / 2 - 60);
+            spriteCtx.fillText('• SWIPE LEFT/RIGHT to move', this.gameWidth / 2, this.gameHeight / 2 - 45);
+            spriteCtx.fillText('• Hit reactors twice to destroy', this.gameWidth / 2, this.gameHeight / 2 - 30);
+            
+            // Add fullscreen hint
+            spriteCtx.fillStyle = '#00ffff';
+            spriteCtx.font = 'bold 11px Courier New';
+            spriteCtx.fillText('Touch anywhere to enter fullscreen', this.gameWidth / 2, this.gameHeight / 2 - 10);
         } else {
             spriteCtx.font = 'bold 48px Courier New';
             spriteCtx.textAlign = 'center';
@@ -741,7 +885,12 @@ class AirplaneGame {
                 // Auto-request fullscreen on first touch
                 if (!this.autoFullscreenRequested) {
                     this.autoFullscreenRequested = true;
-                    this.requestMobileFullscreen();
+                    console.log('First touch detected, requesting fullscreen...');
+                    
+                    // Small delay to ensure touch is registered
+                    setTimeout(() => {
+                        this.requestMobileFullscreen();
+                    }, 100);
                 }
                 
                 const rect = this.canvas.getBoundingClientRect();
