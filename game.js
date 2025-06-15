@@ -63,8 +63,12 @@ class AirplaneGame {
         }
         
         // High scores system
-        this.highScores = this.loadHighScores();
+        this.highScores = [];
         this.isNewHighScore = false;
+        
+        // Initialize Supabase (replace with your actual URL and key)
+        this.supabase = null;
+        this.initializeSupabase();
         
         // Name input system
         this.playerNameInput = '';
@@ -457,30 +461,80 @@ class AirplaneGame {
         this.topScoresButtonImage = spriteCanvas;
     }
     
-    // High scores system methods
-    loadHighScores() {
-        const stored = localStorage.getItem('operationRisingLionHighScores');
-        if (stored) {
-            try {
-                const scores = JSON.parse(stored);
-                return Array.isArray(scores) ? scores : [];
-            } catch (e) {
-                console.warn('Failed to parse high scores, resetting:', e);
-                return [];
-            }
-        }
-        return [];
-    }
-    
-    saveHighScores() {
+    // Supabase initialization
+    async initializeSupabase() {
         try {
-            localStorage.setItem('operationRisingLionHighScores', JSON.stringify(this.highScores));
-        } catch (e) {
-            console.warn('Failed to save high scores:', e);
+            let SUPABASE_URL, SUPABASE_ANON_KEY;
+
+            // Try to get credentials from config file first (for local development)
+            if (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+                SUPABASE_URL = CONFIG.SUPABASE_URL;
+                SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
+                console.log('Using credentials from config.js');
+            } else {
+                // Fallback: Use placeholder values (will be replaced during deployment)
+                SUPABASE_URL = '{{SUPABASE_URL}}';
+                SUPABASE_ANON_KEY = '{{SUPABASE_ANON_KEY}}';
+                
+                // Check if placeholders were replaced (meaning we're in production)
+                if (SUPABASE_URL.includes('{{') || SUPABASE_ANON_KEY.includes('{{')) {
+                    console.error('Supabase credentials not configured for production deployment.');
+                    this.highScores = [];
+                    return;
+                }
+            }
+            
+            if (typeof supabase !== 'undefined') {
+                this.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log('Supabase initialized successfully');
+                
+                // Load high scores from database
+                await this.loadHighScores();
+            } else {
+                console.error('Supabase library not loaded');
+                this.highScores = [];
+            }
+        } catch (error) {
+            console.error('Failed to initialize Supabase:', error);
+            this.highScores = [];
         }
     }
     
-    checkForHighScore() {
+    // High scores system methods
+    async loadHighScores() {
+        if (!this.supabase) {
+            console.error('Supabase not initialized');
+            this.highScores = [];
+            return;
+        }
+
+        try {
+            const { data, error } = await this.supabase
+                .from('high_scores')
+                .select('player_name, score, created_at')
+                .order('score', { ascending: false })
+                .limit(3);
+            
+            if (error) throw error;
+            
+            // Format data to match your existing structure
+            this.highScores = data.map(score => ({
+                name: score.player_name,
+                score: score.score,
+                date: new Date(score.created_at).toLocaleDateString()
+            }));
+            
+            console.log('High scores loaded from Supabase:', this.highScores);
+        } catch (error) {
+            console.error('Failed to load high scores from Supabase:', error);
+            this.highScores = [];
+        }
+    }
+    
+    async checkForHighScore() {
+        // Refresh high scores from database first
+        await this.loadHighScores();
+        
         // Check if current score qualifies for top 3
         if (this.highScores.length < 3) {
             return true; // Always qualify if less than 3 scores
@@ -491,21 +545,31 @@ class AirplaneGame {
         return this.score > lowestHighScore;
     }
     
-    addHighScore(playerName) {
-        const newScore = {
-            name: playerName.trim() || 'Anonymous',
-            score: this.score,
-            date: new Date().toLocaleDateString()
-        };
+    async addHighScore(playerName) {
+        const cleanName = (playerName || '').trim() || 'Anonymous';
         
-        this.highScores.push(newScore);
-        
-        // Sort by score (highest first) and keep only top 3
-        this.highScores.sort((a, b) => b.score - a.score);
-        this.highScores = this.highScores.slice(0, 3);
-        
-        this.saveHighScores();
-        console.log('New high score saved:', newScore);
+        if (!this.supabase) {
+            console.error('Supabase not initialized, cannot save high score');
+            return;
+        }
+
+        try {
+            const { error } = await this.supabase
+                .from('high_scores')
+                .insert([{
+                    player_name: cleanName,
+                    score: this.score
+                }]);
+            
+            if (error) throw error;
+            
+            console.log('High score saved to Supabase:', { name: cleanName, score: this.score });
+            
+            // Reload high scores from database to get updated leaderboard
+            await this.loadHighScores();
+        } catch (error) {
+            console.error('Failed to save high score to Supabase:', error);
+        }
     }
     
     promptForPlayerName() {
@@ -539,10 +603,10 @@ class AirplaneGame {
         );
     }
     
-    handleNameInput(key) {
+    async handleNameInput(key) {
         if (key === 'Enter' || key === 'DONE') {
             // Submit the name
-            this.addHighScore(this.playerNameInput || 'Anonymous');
+            await this.addHighScore(this.playerNameInput || 'Anonymous');
             this.isNewHighScore = false;
             this.gameState = 'splash';
             this.resetGame();
@@ -1071,13 +1135,15 @@ class AirplaneGame {
                point.y <= button.y + button.height;
     }
     
-    handleSplashClick() {
+    async handleSplashClick() {
         if (this.startButton.hovered) {
             this.gameState = 'playing';
             this.initializeReactors();
             console.log('Game Started!');
         } else if (this.topScoresButton.hovered) {
             this.gameState = 'topScores';
+            // Refresh high scores when opening the screen
+            await this.loadHighScores();
             console.log('Top Scores screen opened');
         }
     }
@@ -1300,14 +1366,16 @@ class AirplaneGame {
                 
                 // Check if game over
                 if (this.currentHealth <= 0) {
-                    // Check for high score before switching to game over
-                    if (this.checkForHighScore()) {
-                        this.isNewHighScore = true;
-                    }
-                    
                     this.gameState = 'gameOver';
                     this.gameOverTime = Date.now();
                     console.log('Game Over! Health depleted.');
+                    
+                    // Check for high score asynchronously
+                    this.checkForHighScore().then(isHighScore => {
+                        if (isHighScore) {
+                            this.isNewHighScore = true;
+                        }
+                    });
                 }
                 
                 break; // Exit bullet loop
@@ -2204,6 +2272,11 @@ class AirplaneGame {
         this.playerNameInput = '';
         this.nameInputCursor = 0;
         this.nameInputBlinkTime = 0;
+        
+        // Refresh high scores from database
+        if (this.supabase) {
+            this.loadHighScores();
+        }
         
         // Reset airplane position - adjust for mobile
         if (this.isMobile) {
