@@ -154,6 +154,7 @@ class AirplaneGame {
         
         // Music system
         this.backgroundMusic = null;
+        this.explosionSound = null;
         this.isMusicMuted = false;
         this.musicButton = {
             x: 10,
@@ -320,6 +321,27 @@ class AirplaneGame {
         } catch (error) {
             console.error('Error creating Audio object:', error);
             this.backgroundMusic = null;
+        }
+        
+        // Load explosion sound effect
+        try {
+            this.explosionSound = new Audio('./assets/explosion.mp3');
+            this.explosionSound.volume = 0.7; // Slightly louder than music
+            this.explosionSound.preload = 'auto';
+            
+            this.explosionSound.addEventListener('error', (e) => {
+                console.warn('Explosion sound not found: ./assets/explosion.mp3');
+                this.explosionSound = null;
+            });
+            
+            this.explosionSound.addEventListener('loadeddata', () => {
+                console.log('Explosion sound loaded successfully');
+            });
+            
+            console.log('Attempting to load explosion sound from: ./assets/explosion.mp3');
+        } catch (error) {
+            console.error('Error loading explosion sound:', error);
+            this.explosionSound = null;
         }
     }
     
@@ -1283,6 +1305,16 @@ class AirplaneGame {
         console.log('Music ' + (this.isMusicMuted ? 'muted' : 'unmuted'));
     }
     
+    playExplosionSound() {
+        if (this.explosionSound && !this.isMusicMuted) {
+            // Reset to beginning and play
+            this.explosionSound.currentTime = 0;
+            this.explosionSound.play().catch(e => {
+                console.warn('Could not play explosion sound:', e.name);
+            });
+        }
+    }
+    
 
     
     update() {
@@ -1431,6 +1463,7 @@ class AirplaneGame {
                         reactor.hits = 2;
                         this.score += 2; // 2 points for destruction
                         this.destroyedReactors++;
+                        this.playExplosionSound(); // Play explosion sound when reactor is completely destroyed
                         console.log(`Reactor destroyed! Score: ${this.score}`);
                     }
                     
