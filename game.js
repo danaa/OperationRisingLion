@@ -31,7 +31,7 @@ class AirplaneGame {
         this.gameHeight = this.canvas.height;
         
         // Game states
-        this.gameState = 'splash'; // 'splash', 'playing', 'paused'
+        this.gameState = 'splash'; // 'splash', 'playing', 'paused', 'gameOver'
         
         // Splash screen assets
         this.splashImage = null;
@@ -98,6 +98,18 @@ class AirplaneGame {
         this.reactorSpawnInterval = 120; // Spawn every 2 seconds at 60fps
         this.lastReactorX = -200; // Track last reactor X position for spacing
         
+        // Anti-aircraft gun properties
+        this.aaGuns = [];
+        this.aaGunImage = null;
+        this.aaGunImageFlipped = null;
+        this.aaGunSpawnTimer = 0;
+        this.aaGunSpawnInterval = 180; // Spawn every 3 seconds at 60fps
+        this.aaGunsEnabled = false; // Enable when score >= 10
+        
+        // AA gun bullets
+        this.aaGunBullets = [];
+        this.aaGunBulletSpeed = 4;
+        
         // Explosion effects
         this.explosions = [];
         
@@ -105,6 +117,12 @@ class AirplaneGame {
         this.score = 0;
         this.hitReactors = 0;
         this.destroyedReactors = 0;
+        
+        // Health system
+        this.maxHealth = 5;
+        this.currentHealth = 5;
+        this.gameOverTime = 0;
+        this.gameOverDuration = 3000; // 3 seconds
         
         // Input handling
         this.keys = {};
@@ -226,7 +244,8 @@ class AirplaneGame {
             { key: 'airplane', src: './assets/airplane.png' },
             { key: 'background', src: './assets/background.png' },
             { key: 'reactor', src: './assets/reactor.png' },
-            { key: 'damaged_reactor', src: './assets/damaged_reactor.png' }
+            { key: 'damaged_reactor', src: './assets/damaged_reactor.png' },
+            { key: 'aa_gun', src: './assets/gun.png' }
         ];
         
         this.totalAssets = assetsToLoad.length;
@@ -265,6 +284,9 @@ class AirplaneGame {
             this.reactorImage = image;
         } else if (key === 'damaged_reactor') {
             this.damagedReactorImage = image;
+        } else if (key === 'aa_gun') {
+            // Scale AA gun to be 3/4 the size of reactors
+            this.scaleAAGunToReactorSize(image);
         }
         
         this.checkAssetsComplete();
@@ -295,6 +317,9 @@ class AirplaneGame {
         } else if (key === 'damaged_reactor') {
             console.log('Creating fallback damaged reactor sprite');
             this.createDamagedReactorSprite();
+        } else if (key === 'aa_gun') {
+            console.log('Failed to load gun.png - AA guns will be disabled');
+            this.aaGunImage = null;
         }
         
         this.checkAssetsComplete();
@@ -341,14 +366,31 @@ class AirplaneGame {
             spriteCtx.fillStyle = '#ffffff';
             spriteCtx.fillText('• TAP to shoot missiles', this.gameWidth / 2, this.gameHeight * 0.5 + 25);
             spriteCtx.fillText('• SWIPE LEFT/RIGHT to move', this.gameWidth / 2, this.gameHeight * 0.5 + 45);
-            spriteCtx.fillText('• Hit reactors twice to destroy', this.gameWidth / 2, this.gameHeight * 0.5 + 65);
-        } else {
-            spriteCtx.font = 'bold 48px Courier New';
-            spriteCtx.textAlign = 'center';
-            spriteCtx.fillText('NUCLEAR STRIKE', this.gameWidth / 2, this.gameHeight / 2 - 100);
-            
-            spriteCtx.font = 'bold 24px Courier New';
-            spriteCtx.fillText('AIRPLANE MISSION', this.gameWidth / 2, this.gameHeight / 2 - 50);
+            spriteCtx.fillText('• DODGE AA gun bullets!', this.gameWidth / 2, this.gameHeight * 0.5 + 65);
+            spriteCtx.fillText('• Hit reactors twice to destroy', this.gameWidth / 2, this.gameHeight * 0.5 + 85);
+                } else {
+        spriteCtx.font = 'bold 48px Courier New';
+        spriteCtx.textAlign = 'center';
+        spriteCtx.fillText('NUCLEAR STRIKE', this.gameWidth / 2, this.gameHeight / 2 - 150);
+        
+        spriteCtx.font = 'bold 24px Courier New';
+        spriteCtx.fillText('AIRPLANE MISSION', this.gameWidth / 2, this.gameHeight / 2 - 100);
+        
+        // Add desktop instructions - positioned higher and more visible
+        spriteCtx.fillStyle = '#ffff00';
+        spriteCtx.font = 'bold 18px Courier New';
+        spriteCtx.fillText('DESKTOP CONTROLS:', this.gameWidth / 2, this.gameHeight / 2 - 50);
+        
+        spriteCtx.font = 'bold 16px Courier New';
+        spriteCtx.fillStyle = '#00ff00';
+        spriteCtx.fillText('↑↓←→ ARROW KEYS to move (UP/DOWN to dodge!)', this.gameWidth / 2, this.gameHeight / 2 - 20);
+        spriteCtx.fillText('SPACE to shoot missiles', this.gameWidth / 2, this.gameHeight / 2 + 5);
+        
+        spriteCtx.fillStyle = '#ff4444';
+        spriteCtx.fillText('DODGE red AA gun bullets!', this.gameWidth / 2, this.gameHeight / 2 + 30);
+        
+        spriteCtx.fillStyle = '#ffffff';
+        spriteCtx.fillText('Hit reactors twice to destroy', this.gameWidth / 2, this.gameHeight / 2 + 55);
         }
         
         this.splashImage = spriteCanvas;
@@ -527,6 +569,42 @@ class AirplaneGame {
         this.damagedReactorImage = spriteCanvas;
     }
     
+
+    
+    scaleAAGunToReactorSize(originalImage) {
+        // Calculate target size as 3/4 of reactor size
+        const reactorSize = this.isMobile ? 80 : 120 * 1.3;
+        const targetSize = Math.floor(reactorSize * 0.75);
+        
+        const spriteCanvas = document.createElement('canvas');
+        spriteCanvas.width = targetSize;
+        spriteCanvas.height = targetSize;
+        const spriteCtx = spriteCanvas.getContext('2d');
+        
+        // Draw scaled image maintaining aspect ratio
+        spriteCtx.drawImage(originalImage, 0, 0, targetSize, targetSize);
+        
+        this.aaGunImage = spriteCanvas;
+        this.createFlippedAAGun();
+        
+        console.log(`AA Gun scaled to ${targetSize}x${targetSize} (3/4 of reactor size: ${reactorSize})`);
+    }
+    
+    createFlippedAAGun() {
+        if (!this.aaGunImage) return;
+        
+        const spriteCanvas = document.createElement('canvas');
+        spriteCanvas.width = this.aaGunImage.width;
+        spriteCanvas.height = this.aaGunImage.height;
+        const spriteCtx = spriteCanvas.getContext('2d');
+        
+        // Flip horizontally
+        spriteCtx.scale(-1, 1);
+        spriteCtx.drawImage(this.aaGunImage, -this.aaGunImage.width, 0);
+        
+        this.aaGunImageFlipped = spriteCanvas;
+    }
+    
     initializeReactors() {
         // Create initial reactors scattered around with proper spacing
         for (let i = 0; i < 3; i++) {
@@ -540,13 +618,28 @@ class AirplaneGame {
         
         // Adjust reactor size for mobile
         const reactorSize = this.isMobile ? 80 : 120 * 1.3;
-        const spacing = this.isMobile ? 100 : 150 * 1.3;
+        const minSpacing = reactorSize * 1.5; // Increased spacing between reactors
         
-        // Try to find a good X position that doesn't overlap
+        // Try to find a good X position that doesn't overlap with existing reactors
         do {
             x = Math.random() * (this.gameWidth - reactorSize);
             attempts++;
-        } while (Math.abs(x - this.lastReactorX) < spacing && attempts < 10);
+            
+            // Check if this position overlaps with any existing reactor
+            let overlaps = false;
+            for (let existingReactor of this.reactors) {
+                if (existingReactor.destroyed) continue;
+                
+                const distance = Math.abs(x - existingReactor.x);
+                if (distance < minSpacing && Math.abs((customY || -reactorSize) - existingReactor.y) < reactorSize * 2) {
+                    overlaps = true;
+                    break;
+                }
+            }
+            
+            if (!overlaps) break;
+            
+        } while (attempts < 20);
         
         this.lastReactorX = x;
         
@@ -562,6 +655,99 @@ class AirplaneGame {
         };
         
         this.reactors.push(reactor);
+    }
+    
+    spawnAAGun() {
+        if (!this.aaGunsEnabled || this.score < 10 || !this.aaGunImage) return;
+        
+        const gunWidth = this.aaGunImage.width;
+        const gunHeight = this.aaGunImage.height;
+        const sideMargin = 50; // Distance from screen edge
+        
+        // Randomly choose left or right side
+        const isLeftSide = Math.random() < 0.5;
+        
+        let x, flipped;
+        if (isLeftSide) {
+            x = sideMargin; // Left side
+            flipped = true;
+        } else {
+            x = this.gameWidth - gunWidth - sideMargin; // Right side
+            flipped = false;
+        }
+        
+        // Find a Y position that doesn't overlap with reactors or other AA guns
+        let y;
+        let attempts = 0;
+        const maxAttempts = 30; // Increased attempts
+        const minSpacing = Math.max(gunHeight, gunWidth) * 1.2; // Minimum spacing between guns
+        
+        do {
+            y = Math.random() * (this.gameHeight - gunHeight - 300) + 150; // Better Y range
+            attempts++;
+            
+            // Check overlap with reactors
+            let overlapsReactor = this.checkAAGunReactorOverlap(x, y, gunWidth, gunHeight);
+            
+            // Check overlap with other AA guns
+            let overlapsGun = false;
+            for (let existingGun of this.aaGuns) {
+                if (existingGun.destroyed) continue;
+                
+                const distance = Math.sqrt(
+                    Math.pow(x - existingGun.x, 2) + 
+                    Math.pow(y - existingGun.y, 2)
+                );
+                
+                if (distance < minSpacing) {
+                    overlapsGun = true;
+                    break;
+                }
+            }
+            
+            if (!overlapsReactor && !overlapsGun) break;
+            
+        } while (attempts < maxAttempts);
+        
+        // If we couldn't find a good position, skip this spawn
+        if (attempts >= maxAttempts) {
+            console.log('Could not find suitable position for AA gun, skipping spawn');
+            return;
+        }
+        
+        const aaGun = {
+            x: x,
+            y: y,
+            width: gunWidth,
+            height: gunHeight,
+            speed: this.backgroundSpeed,
+            flipped: flipped,
+            destroyed: false,
+            spawnTime: Date.now(), // Track when it was spawned for smoother appearance
+            lastShotTime: 0, // Track when it last shot
+            shootInterval: 1500 + Math.random() * 1500 // Random shooting interval (1.5-3 seconds)
+        };
+        
+        this.aaGuns.push(aaGun);
+        console.log(`AA Gun spawned at (${x}, ${y}), flipped: ${flipped}`);
+    }
+    
+    checkAAGunReactorOverlap(gunX, gunY, gunWidth, gunHeight) {
+        // Check if AA gun position would overlap with any reactor
+        const safetyMargin = 20; // Extra margin for safety
+        
+        for (let reactor of this.reactors) {
+            if (reactor.destroyed) continue;
+            
+            // Check AABB collision with safety margin
+            if (gunX < reactor.x + reactor.width + safetyMargin &&
+                gunX + gunWidth + safetyMargin > reactor.x &&
+                gunY < reactor.y + reactor.height + safetyMargin &&
+                gunY + gunHeight + safetyMargin > reactor.y) {
+                return true; // Overlap detected
+            }
+        }
+        return false; // No overlap
     }
     
     setupEventListeners() {
@@ -722,12 +908,32 @@ class AirplaneGame {
 
     
     update() {
-        if (this.gameState !== 'playing' || !this.assetsLoaded) return;
+        if (!this.assetsLoaded) return;
+        
+        // Handle game over state
+        if (this.gameState === 'gameOver') {
+            const currentTime = Date.now();
+            if (currentTime - this.gameOverTime >= this.gameOverDuration) {
+                this.gameState = 'splash';
+                this.resetGame();
+            }
+            return;
+        }
+        
+        if (this.gameState !== 'playing') return;
+        
+        // Enable AA guns when score reaches 10
+        if (this.score >= 10 && !this.aaGunsEnabled) {
+            this.aaGunsEnabled = true;
+            console.log('AA Guns enabled! Score: ' + this.score);
+        }
         
         this.updateBackground();
         this.updateAirplane();
         this.updateRockets();
         this.updateReactors();
+        this.updateAAGuns();
+        this.updateAAGunBullets();
         this.updateExplosions();
         this.checkCollisions();
         this.updateCooldowns();
@@ -751,13 +957,13 @@ class AirplaneGame {
             this.airplane.x += this.airplane.speed;
         }
         
-        // Optional: Allow vertical movement within a limited range
-        if (this.keys['ArrowUp'] && this.airplane.y > this.gameHeight - 150) {
-            this.airplane.y -= this.airplane.speed * 0.5;
+        // Allow vertical movement for dodging AA gun bullets
+        if (this.keys['ArrowUp'] && this.airplane.y > 50) {
+            this.airplane.y -= this.airplane.speed * 0.7;
         }
         
-        if (this.keys['ArrowDown'] && this.airplane.y < this.gameHeight - 60) {
-            this.airplane.y += this.airplane.speed * 0.5;
+        if (this.keys['ArrowDown'] && this.airplane.y < this.gameHeight - this.airplane.height - 10) {
+            this.airplane.y += this.airplane.speed * 0.7;
         }
         
         // Handle shooting
@@ -846,6 +1052,72 @@ class AirplaneGame {
                     break; // Exit reactor loop since rocket is gone
                 }
             }
+            
+            // Check collisions with AA guns (if still have rocket)
+            if (i >= 0 && i < this.rockets.length) {
+                for (let j = 0; j < this.aaGuns.length; j++) {
+                    const aaGun = this.aaGuns[j];
+                    
+                    if (aaGun.destroyed) continue;
+                    
+                    // AABB collision detection
+                    if (this.rockets[i].x < aaGun.x + aaGun.width &&
+                        this.rockets[i].x + this.rockets[i].width > aaGun.x &&
+                        this.rockets[i].y < aaGun.y + aaGun.height &&
+                        this.rockets[i].y + this.rockets[i].height > aaGun.y) {
+                        
+                        // Remove rocket
+                        this.rockets.splice(i, 1);
+                        
+                        // Create explosion
+                        this.createExplosion(
+                            aaGun.x + aaGun.width / 2,
+                            aaGun.y + aaGun.height / 2
+                        );
+                        
+                        // Destroy AA gun
+                        aaGun.destroyed = true;
+                        this.score += 3; // 3 points for destroying AA gun
+                        console.log(`AA Gun destroyed! Score: ${this.score}`);
+                        
+                        break; // Exit AA gun loop since rocket is gone
+                    }
+                }
+            }
+        }
+        
+        // Check AA gun bullets hitting airplane
+        for (let i = this.aaGunBullets.length - 1; i >= 0; i--) {
+            const bullet = this.aaGunBullets[i];
+            
+            // AABB collision detection with airplane
+            if (bullet.x < this.airplane.x + this.airplane.width &&
+                bullet.x + bullet.width > this.airplane.x &&
+                bullet.y < this.airplane.y + this.airplane.height &&
+                bullet.y + bullet.height > this.airplane.y) {
+                
+                // Remove bullet
+                this.aaGunBullets.splice(i, 1);
+                
+                // Create explosion at airplane
+                this.createExplosion(
+                    this.airplane.x + this.airplane.width / 2,
+                    this.airplane.y + this.airplane.height / 2
+                );
+                
+                // Reduce health
+                this.currentHealth--;
+                console.log(`Airplane hit! Health: ${this.currentHealth}/${this.maxHealth}`);
+                
+                // Check if game over
+                if (this.currentHealth <= 0) {
+                    this.gameState = 'gameOver';
+                    this.gameOverTime = Date.now();
+                    console.log('Game Over! Health depleted.');
+                }
+                
+                break; // Exit bullet loop
+            }
         }
     }
     
@@ -901,6 +1173,92 @@ class AirplaneGame {
         }
     }
     
+    updateAAGuns() {
+        if (!this.aaGunsEnabled) return;
+        
+        // Update AA gun spawning
+        this.aaGunSpawnTimer++;
+        if (this.aaGunSpawnTimer >= this.aaGunSpawnInterval) {
+            this.spawnAAGun();
+            this.aaGunSpawnTimer = 0;
+        }
+        
+        // Update existing AA guns
+        for (let i = this.aaGuns.length - 1; i >= 0; i--) {
+            const aaGun = this.aaGuns[i];
+            
+            if (aaGun.destroyed) continue;
+            
+            // Move AA gun down with background
+            aaGun.y += aaGun.speed;
+            
+            // Check if AA gun should shoot at airplane
+            const currentTime = Date.now();
+            if (currentTime - aaGun.lastShotTime > aaGun.shootInterval) {
+                // Only shoot if gun is on screen and airplane is in range
+                if (aaGun.y > -aaGun.height && aaGun.y < this.gameHeight) {
+                    this.aaGunShoot(aaGun);
+                    aaGun.lastShotTime = currentTime;
+                }
+            }
+            
+            // Remove AA guns that are off screen
+            if (aaGun.y > this.gameHeight + aaGun.height) {
+                this.aaGuns.splice(i, 1);
+            }
+        }
+    }
+    
+    aaGunShoot(aaGun) {
+        // Calculate direction to airplane
+        const gunCenterX = aaGun.x + aaGun.width / 2;
+        const gunCenterY = aaGun.y + aaGun.height / 2;
+        const airplaneCenterX = this.airplane.x + this.airplane.width / 2;
+        const airplaneCenterY = this.airplane.y + this.airplane.height / 2;
+        
+        // Calculate angle to airplane
+        const deltaX = airplaneCenterX - gunCenterX;
+        const deltaY = airplaneCenterY - gunCenterY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        // Only shoot if airplane is within reasonable range
+        if (distance > 600) return;
+        
+        // Normalize direction
+        const dirX = deltaX / distance;
+        const dirY = deltaY / distance;
+        
+        // Create bullet
+        const bullet = {
+            x: gunCenterX - 2,
+            y: gunCenterY - 2,
+            width: 4,
+            height: 4,
+            velocityX: dirX * this.aaGunBulletSpeed,
+            velocityY: dirY * this.aaGunBulletSpeed,
+            fromGun: true
+        };
+        
+        this.aaGunBullets.push(bullet);
+    }
+    
+    updateAAGunBullets() {
+        // Update existing bullets
+        for (let i = this.aaGunBullets.length - 1; i >= 0; i--) {
+            const bullet = this.aaGunBullets[i];
+            
+            // Move bullet
+            bullet.x += bullet.velocityX;
+            bullet.y += bullet.velocityY;
+            
+            // Remove bullets that are off screen
+            if (bullet.x < -10 || bullet.x > this.gameWidth + 10 || 
+                bullet.y < -10 || bullet.y > this.gameHeight + 10) {
+                this.aaGunBullets.splice(i, 1);
+            }
+        }
+    }
+    
     render() {
         if (!this.assetsLoaded) {
             this.showLoadingScreen();
@@ -911,6 +1269,8 @@ class AirplaneGame {
             this.renderSplashScreen();
         } else if (this.gameState === 'playing') {
             this.renderGame();
+        } else if (this.gameState === 'gameOver') {
+            this.renderGameOver();
         }
     }
     
@@ -922,6 +1282,9 @@ class AirplaneGame {
         if (this.splashImage) {
             this.ctx.drawImage(this.splashImage, 0, 0, this.gameWidth, this.gameHeight);
         }
+        
+        // Draw instructions overlay on bottom right corner
+        this.drawInstructionsOverlay();
         
         // Draw start button
         if (this.startButtonImage) {
@@ -964,6 +1327,65 @@ class AirplaneGame {
 
     }
     
+    drawInstructionsOverlay() {
+        // Position instructions in bottom right corner
+        const rightMargin = 20;
+        const bottomMargin = 20;
+        const lineHeight = 20;
+        
+        // Semi-transparent background for readability
+        const boxWidth = this.isMobile ? 250 : 350;
+        const boxHeight = this.isMobile ? 100 : 120;
+        const boxX = this.gameWidth - boxWidth - rightMargin;
+        const boxY = this.gameHeight - boxHeight - bottomMargin;
+        
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+        
+        // Instructions text
+        let textY = boxY + 25;
+        const textX = boxX + 10;
+        
+        if (this.isMobile) {
+            // Mobile instructions
+            this.ctx.fillStyle = '#ffff00';
+            this.ctx.font = 'bold 12px Courier New';
+            this.ctx.fillText('MOBILE CONTROLS:', textX, textY);
+            
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = '10px Courier New';
+            textY += lineHeight;
+            this.ctx.fillText('• TAP to shoot missiles', textX, textY);
+            textY += lineHeight;
+            this.ctx.fillText('• SWIPE LEFT/RIGHT to move', textX, textY);
+            textY += lineHeight;
+            this.ctx.fillText('• DODGE red AA gun bullets!', textX, textY);
+        } else {
+            // Desktop instructions
+            this.ctx.fillStyle = '#ffff00';
+            this.ctx.font = 'bold 14px Courier New';
+            this.ctx.fillText('DESKTOP CONTROLS:', textX, textY);
+            
+            this.ctx.fillStyle = '#00ff00';
+            this.ctx.font = 'bold 12px Courier New';
+            textY += lineHeight;
+            this.ctx.fillText('↑↓←→ ARROW KEYS to move (UP/DOWN to dodge!)', textX, textY);
+            textY += lineHeight;
+            this.ctx.fillText('SPACE to shoot missiles', textX, textY);
+            
+            this.ctx.fillStyle = '#ff4444';
+            textY += lineHeight;
+            this.ctx.fillText('DODGE red AA gun bullets!', textX, textY);
+            
+            this.ctx.fillStyle = '#ffffff';
+            textY += lineHeight;
+            this.ctx.fillText('Hit reactors twice to destroy', textX, textY);
+        }
+    }
+    
     renderGame() {
         // Clear canvas
         this.ctx.clearRect(0, 0, this.gameWidth, this.gameHeight);
@@ -974,8 +1396,14 @@ class AirplaneGame {
         // Draw reactors
         this.drawReactors();
         
+        // Draw AA guns
+        this.drawAAGuns();
+        
         // Draw rockets
         this.drawRockets();
+        
+        // Draw AA gun bullets
+        this.drawAAGunBullets();
         
         // Draw explosions
         this.drawExplosions();
@@ -1093,6 +1521,56 @@ class AirplaneGame {
         });
     }
     
+    drawAAGuns() {
+        if (!this.aaGunsEnabled) return;
+        
+        this.aaGuns.forEach(aaGun => {
+            if (aaGun.destroyed) return;
+            
+            // Calculate fade-in effect for newly spawned guns
+            const timeSinceSpawn = Date.now() - (aaGun.spawnTime || 0);
+            const fadeInDuration = 1000; // 1 second fade-in
+            let opacity = Math.min(timeSinceSpawn / fadeInDuration, 1);
+            
+            // Choose the appropriate image based on flipped state
+            const image = aaGun.flipped ? 
+                (this.aaGunImageFlipped || this.aaGunImage) : 
+                this.aaGunImage;
+            
+            if (image) {
+                // Save current alpha
+                const originalAlpha = this.ctx.globalAlpha;
+                this.ctx.globalAlpha = opacity;
+                
+                // Add red glow effect like reactors
+                const glowIntensity = (Math.sin(Date.now() * 0.005) + 1) * 0.3 + 0.4;
+                this.ctx.shadowColor = `rgba(255, 68, 68, ${glowIntensity * opacity})`;
+                this.ctx.shadowBlur = 12;
+                
+                this.ctx.drawImage(
+                    image,
+                    aaGun.x,
+                    aaGun.y,
+                    aaGun.width,
+                    aaGun.height
+                );
+                
+                // Reset shadow
+                this.ctx.shadowBlur = 0;
+                
+                // Restore original alpha
+                this.ctx.globalAlpha = originalAlpha;
+            }
+            
+            // Add warning indicator above AA gun with red glow and fade-in
+            this.ctx.fillStyle = `rgba(255, 0, 0, ${((Math.sin(Date.now() * 0.008) + 1) * 0.3 + 0.5) * opacity})`;
+            this.ctx.font = '12px Courier New';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('⚠', aaGun.x + aaGun.width / 2, aaGun.y - 5);
+            this.ctx.textAlign = 'left';
+        });
+    }
+    
     drawRockets() {
         this.ctx.fillStyle = '#ffff00';
         this.rockets.forEach(rocket => {
@@ -1103,6 +1581,29 @@ class AirplaneGame {
             this.ctx.shadowColor = '#ffff00';
             this.ctx.shadowBlur = 5;
             this.ctx.fillRect(rocket.x, rocket.y, rocket.width, rocket.height);
+            this.ctx.shadowBlur = 0;
+        });
+    }
+    
+    drawAAGunBullets() {
+        this.aaGunBullets.forEach(bullet => {
+            // Add strong red glow effect for visibility
+            this.ctx.shadowColor = '#ff0000';
+            this.ctx.shadowBlur = 8;
+            
+            // Draw outer glow (larger, more transparent)
+            this.ctx.fillStyle = 'rgba(255, 0, 0, 0.6)';
+            this.ctx.fillRect(bullet.x - 1, bullet.y - 1, bullet.width + 2, bullet.height + 2);
+            
+            // Draw main bullet body (bright red)
+            this.ctx.fillStyle = '#ff2222';
+            this.ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            
+            // Add inner bright core
+            this.ctx.fillStyle = '#ffaaaa';
+            this.ctx.fillRect(bullet.x + 1, bullet.y + 1, bullet.width - 2, bullet.height - 2);
+            
+            // Reset shadow
             this.ctx.shadowBlur = 0;
         });
     }
@@ -1174,6 +1675,9 @@ class AirplaneGame {
         this.ctx.font = `${fontSize} Courier New`;
         this.ctx.fillText(`SCORE: ${this.score}`, 15, this.isMobile ? 30 : 35);
         
+        // Draw health bar in top right
+        this.drawHealthBar();
+        
         // Add mobile controls reminder during gameplay
         if (this.isMobile && this.gameState === 'playing') {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
@@ -1198,16 +1702,98 @@ class AirplaneGame {
         }
     }
     
+    drawHealthBar() {
+        // Health bar dimensions and position (top right)
+        const barWidth = this.isMobile ? 100 : 120;
+        const barHeight = this.isMobile ? 12 : 15;
+        const barX = this.gameWidth - barWidth - 15;
+        const barY = 15;
+        
+        // Background (empty health)
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
+        
+        // Health percentage
+        const healthPercent = this.currentHealth / this.maxHealth;
+        const healthWidth = barWidth * healthPercent;
+        
+        // Health bar color based on health level
+        let healthColor;
+        if (healthPercent > 0.6) {
+            healthColor = '#00ff00'; // Green
+        } else if (healthPercent > 0.3) {
+            healthColor = '#ffff00'; // Yellow
+        } else {
+            healthColor = '#ff0000'; // Red
+        }
+        
+        // Draw health bar
+        this.ctx.fillStyle = healthColor;
+        this.ctx.fillRect(barX, barY, healthWidth, barHeight);
+        
+        // Health text
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = `${this.isMobile ? '10px' : '12px'} Courier New`;
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(`${this.currentHealth}/${this.maxHealth}`, barX + barWidth / 2, barY + barHeight + 15);
+        this.ctx.textAlign = 'left';
+    }
+    
+    renderGameOver() {
+        // Keep the game scene visible but dimmed
+        this.renderGame();
+        
+        // Dark overlay
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.fillRect(0, 0, this.gameWidth, this.gameHeight);
+        
+        // Game Over text
+        this.ctx.fillStyle = '#ff0000';
+        this.ctx.font = `bold ${this.isMobile ? '48px' : '72px'} Courier New`;
+        this.ctx.textAlign = 'center';
+        this.ctx.shadowColor = '#ff0000';
+        this.ctx.shadowBlur = 20;
+        
+        // Pulsing effect
+        const pulseIntensity = (Math.sin(Date.now() * 0.01) + 1) * 0.3 + 0.7;
+        this.ctx.globalAlpha = pulseIntensity;
+        
+        this.ctx.fillText('GAME OVER', this.gameWidth / 2, this.gameHeight / 2);
+        
+        // Reset effects
+        this.ctx.globalAlpha = 1;
+        this.ctx.shadowBlur = 0;
+        this.ctx.textAlign = 'left';
+        
+        // Countdown or instruction
+        const timeLeft = Math.ceil((this.gameOverDuration - (Date.now() - this.gameOverTime)) / 1000);
+        if (timeLeft > 0) {
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = `${this.isMobile ? '16px' : '24px'} Courier New`;
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(`Returning to menu in ${timeLeft}...`, this.gameWidth / 2, this.gameHeight / 2 + 60);
+            this.ctx.textAlign = 'left';
+        }
+    }
+    
     resetGame() {
         // Reset game state when returning to splash
         this.score = 0;
         this.hitReactors = 0;
         this.destroyedReactors = 0;
+        this.currentHealth = this.maxHealth;
         this.rockets = [];
         this.reactors = [];
+        this.aaGuns = [];
+        this.aaGunBullets = [];
         this.explosions = [];
         this.backgroundY = 0;
         this.reactorSpawnTimer = 0;
+        this.aaGunSpawnTimer = 0;
+        this.aaGunsEnabled = false;
         this.lastReactorX = -200;
         this.shootCooldown = 0;
         this.canShoot = true;
