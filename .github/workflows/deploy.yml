@@ -26,8 +26,26 @@ jobs:
 
       - name: Replace credentials in game.js
         run: |
-          sed -i "s/{{SUPABASE_URL}}/${{ secrets.SUPABASE_URL }}/g" game.js
-          sed -i "s/{{SUPABASE_ANON_KEY}}/${{ secrets.SUPABASE_ANON_KEY }}/g" game.js
+          # Use a more robust replacement method that handles special characters
+          python3 -c "
+          import re
+          import os
+          
+          # Read the file
+          with open('game.js', 'r') as f:
+              content = f.read()
+          
+          # Replace placeholders with actual values
+          content = content.replace('{{SUPABASE_URL}}', os.environ['SUPABASE_URL'])
+          content = content.replace('{{SUPABASE_ANON_KEY}}', os.environ['SUPABASE_ANON_KEY'])
+          
+          # Write back to file
+          with open('game.js', 'w') as f:
+              f.write(content)
+          "
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
