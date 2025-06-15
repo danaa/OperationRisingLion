@@ -31,18 +31,18 @@ class AirplaneGame {
         this.gameHeight = this.canvas.height;
         
         // Game states
-        this.gameState = 'splash'; // 'splash', 'playing', 'paused', 'gameOver'
+        this.gameState = 'splash'; // 'splash', 'playing', 'paused', 'gameOver', 'topScores', 'nameInput'
         
         // Splash screen assets
         this.splashImage = null;
         this.startButtonImage = null;
-        this.exitButtonImage = null;
+        this.topScoresButtonImage = null;
         
         // Button properties - will be set properly in updateMobilePositions for mobile
         if (this.isMobile) {
             // Initialize with placeholder values - will be updated in setupMobileCanvas
             this.startButton = { x: 0, y: 0, width: 200, height: 50, hovered: false };
-            this.exitButton = { x: 0, y: 0, width: 200, height: 50, hovered: false };
+            this.topScoresButton = { x: 0, y: 0, width: 200, height: 50, hovered: false };
         } else {
             // Desktop layout (original positioning)
             this.startButton = {
@@ -53,7 +53,7 @@ class AirplaneGame {
                 hovered: false
             };
             
-            this.exitButton = {
+            this.topScoresButton = {
                 x: this.gameWidth / 6 - 85,
                 y: this.gameHeight / 2 + 180,
                 width: 200,
@@ -61,6 +61,17 @@ class AirplaneGame {
                 hovered: false
             };
         }
+        
+        // High scores system
+        this.highScores = this.loadHighScores();
+        this.isNewHighScore = false;
+        
+        // Name input system
+        this.playerNameInput = '';
+        this.nameInputCursor = 0;
+        this.nameInputBlinkTime = 0;
+        this.maxNameLength = 12;
+        this.virtualKeyboard = this.createVirtualKeyboard();
         
         // Airplane properties - adjust for mobile
         if (this.isMobile) {
@@ -212,10 +223,10 @@ class AirplaneGame {
         this.startButton.width = buttonWidth;
         this.startButton.height = buttonHeight;
         
-        this.exitButton.x = (this.gameWidth - buttonWidth) / 2;
-        this.exitButton.y = this.gameHeight * 0.7 + 70; // Below start button
-        this.exitButton.width = buttonWidth;
-        this.exitButton.height = buttonHeight;
+        this.topScoresButton.x = (this.gameWidth - buttonWidth) / 2;
+        this.topScoresButton.y = this.gameHeight * 0.7 + 70; // Below start button
+        this.topScoresButton.width = buttonWidth;
+        this.topScoresButton.height = buttonHeight;
         
         // Airplane positioned at bottom for vertical gameplay
         this.airplane.x = this.gameWidth / 2 - this.airplane.width / 2;
@@ -240,7 +251,7 @@ class AirplaneGame {
         const assetsToLoad = [
             { key: 'splash', src: './assets/splash.png' },
             { key: 'start_button', src: './assets/start.png' },     // Changed from start_button.png
-            { key: 'exit_button', src: './assets/exit.png' },       // Changed from exit_button.png
+            { key: 'top_scores_button', src: './assets/top.png' },  // Top scores button
             { key: 'airplane', src: './assets/airplane.png' },
             { key: 'background', src: './assets/background.png' },
             { key: 'reactor', src: './assets/reactor.png' },
@@ -271,8 +282,8 @@ class AirplaneGame {
             this.splashImage = image;
         } else if (key === 'start_button') {
             this.startButtonImage = image;
-        } else if (key === 'exit_button') {
-            this.exitButtonImage = image;
+        } else if (key === 'top_scores_button') {
+            this.topScoresButtonImage = image;
         } else if (key === 'airplane') {
             this.airplane.image = image;
             // Scale to our desired 3/4 size
@@ -301,9 +312,9 @@ class AirplaneGame {
         } else if (key === 'start_button') {
             console.log('Creating fallback start button');
             this.createStartButton();
-        } else if (key === 'exit_button') {
-            console.log('Creating fallback exit button');
-            this.createExitButton();
+        } else if (key === 'top_scores_button') {
+            console.log('Creating fallback top scores button');
+            this.createTopScoresButton();
 
         } else if (key === 'airplane') {
             console.log('Creating fallback airplane sprite');
@@ -421,29 +432,155 @@ class AirplaneGame {
         this.startButtonImage = spriteCanvas;
     }
     
-    createExitButton() {
+    createTopScoresButton() {
         const spriteCanvas = document.createElement('canvas');
-        spriteCanvas.width = this.exitButton.width;
-        spriteCanvas.height = this.exitButton.height;
+        spriteCanvas.width = this.topScoresButton.width;
+        spriteCanvas.height = this.topScoresButton.height;
         const spriteCtx = spriteCanvas.getContext('2d');
         
-        // Button background - brighter for mobile
-        spriteCtx.fillStyle = this.isMobile ? '#660000' : '#440000';
-        spriteCtx.fillRect(0, 0, this.exitButton.width, this.exitButton.height);
+        // Button background - gold/yellow theme for top scores
+        spriteCtx.fillStyle = this.isMobile ? '#665500' : '#443300';
+        spriteCtx.fillRect(0, 0, this.topScoresButton.width, this.topScoresButton.height);
         
         // Button border - thicker for mobile
-        spriteCtx.strokeStyle = '#ff0000';
+        spriteCtx.strokeStyle = '#ffdd00';
         spriteCtx.lineWidth = this.isMobile ? 4 : 3;
-        spriteCtx.strokeRect(0, 0, this.exitButton.width, this.exitButton.height);
+        spriteCtx.strokeRect(0, 0, this.topScoresButton.width, this.topScoresButton.height);
         
         // Button text - adjust size for mobile
-        spriteCtx.fillStyle = '#ff0000';
-        const fontSize = this.isMobile ? Math.min(20, this.exitButton.width / 10) : 24;
+        spriteCtx.fillStyle = '#ffdd00';
+        const fontSize = this.isMobile ? Math.min(18, this.topScoresButton.width / 12) : 20;
         spriteCtx.font = `bold ${fontSize}px Courier New`;
         spriteCtx.textAlign = 'center';
-        spriteCtx.fillText('EXIT', this.exitButton.width / 2, this.exitButton.height / 2 + 8);
+        spriteCtx.fillText('TOP SCORES', this.topScoresButton.width / 2, this.topScoresButton.height / 2 + 6);
         
-        this.exitButtonImage = spriteCanvas;
+        this.topScoresButtonImage = spriteCanvas;
+    }
+    
+    // High scores system methods
+    loadHighScores() {
+        const stored = localStorage.getItem('operationRisingLionHighScores');
+        if (stored) {
+            try {
+                const scores = JSON.parse(stored);
+                return Array.isArray(scores) ? scores : [];
+            } catch (e) {
+                console.warn('Failed to parse high scores, resetting:', e);
+                return [];
+            }
+        }
+        return [];
+    }
+    
+    saveHighScores() {
+        try {
+            localStorage.setItem('operationRisingLionHighScores', JSON.stringify(this.highScores));
+        } catch (e) {
+            console.warn('Failed to save high scores:', e);
+        }
+    }
+    
+    checkForHighScore() {
+        // Check if current score qualifies for top 3
+        if (this.highScores.length < 3) {
+            return true; // Always qualify if less than 3 scores
+        }
+        
+        // Check if score is higher than the lowest high score
+        const lowestHighScore = Math.min(...this.highScores.map(s => s.score));
+        return this.score > lowestHighScore;
+    }
+    
+    addHighScore(playerName) {
+        const newScore = {
+            name: playerName.trim() || 'Anonymous',
+            score: this.score,
+            date: new Date().toLocaleDateString()
+        };
+        
+        this.highScores.push(newScore);
+        
+        // Sort by score (highest first) and keep only top 3
+        this.highScores.sort((a, b) => b.score - a.score);
+        this.highScores = this.highScores.slice(0, 3);
+        
+        this.saveHighScores();
+        console.log('New high score saved:', newScore);
+    }
+    
+    promptForPlayerName() {
+        // Switch to custom name input screen instead of using alert
+        this.gameState = 'nameInput';
+        this.playerNameInput = '';
+        this.nameInputCursor = 0;
+        this.nameInputBlinkTime = 0;
+        console.log('Switched to name input screen for high score');
+    }
+    
+    createVirtualKeyboard() {
+        const keys = [
+            ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+            ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+            ['Z', 'X', 'C', 'V', 'B', 'N', 'M', '⌫'],
+            ['SPACE', 'DONE', 'CANCEL']
+        ];
+        
+        return keys.map((row, rowIndex) => 
+            row.map((key, keyIndex) => ({
+                key: key,
+                x: 0, // Will be calculated in renderNameInput
+                y: 0, // Will be calculated in renderNameInput
+                width: key === 'SPACE' ? 120 : (key === 'DONE' || key === 'CANCEL' ? 80 : 35),
+                height: 35,
+                hovered: false,
+                row: rowIndex,
+                col: keyIndex
+            }))
+        );
+    }
+    
+    handleNameInput(key) {
+        if (key === 'Enter' || key === 'DONE') {
+            // Submit the name
+            this.addHighScore(this.playerNameInput || 'Anonymous');
+            this.isNewHighScore = false;
+            this.gameState = 'splash';
+            this.resetGame();
+        } else if (key === 'Escape' || key === 'CANCEL') {
+            // Cancel - don't save high score
+            this.isNewHighScore = false;
+            this.gameState = 'splash';
+            this.resetGame();
+        } else if (key === 'Backspace' || key === '⌫') {
+            // Remove last character
+            if (this.playerNameInput.length > 0) {
+                this.playerNameInput = this.playerNameInput.slice(0, -1);
+            }
+        } else if (key === 'SPACE') {
+            // Add space
+            if (this.playerNameInput.length < this.maxNameLength) {
+                this.playerNameInput += ' ';
+            }
+        } else if (key.length === 1 && this.playerNameInput.length < this.maxNameLength) {
+            // Add character (letters, numbers, spaces, basic punctuation)
+            if (/[a-zA-Z0-9\s\-_.]/.test(key)) {
+                this.playerNameInput += key;
+            }
+        }
+    }
+    
+    handleVirtualKeyboardClick() {
+        if (this.gameState !== 'nameInput') return;
+        
+        // Check which virtual key was clicked
+        for (let row of this.virtualKeyboard) {
+            for (let keyObj of row) {
+                if (keyObj.hovered) {
+                    this.handleNameInput(keyObj.key);
+                    break;
+                }
+            }
+        }
     }
     
 
@@ -755,6 +892,13 @@ class AirplaneGame {
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
             
+            // Handle name input screen
+            if (this.gameState === 'nameInput') {
+                e.preventDefault(); // Prevent default browser behavior
+                this.handleNameInput(e.key);
+                return;
+            }
+            
             // Handle shooting
             if (e.code === 'Space' && this.gameState === 'playing') {
                 e.preventDefault(); // Prevent page scrolling
@@ -781,12 +925,18 @@ class AirplaneGame {
             
             if (this.gameState === 'splash') {
                 this.updateButtonHover();
+            } else if (this.gameState === 'nameInput') {
+                this.updateVirtualKeyboardHover();
             }
         });
         
         this.canvas.addEventListener('click', (e) => {
             if (this.gameState === 'splash') {
                 this.handleSplashClick();
+            } else if (this.gameState === 'topScores') {
+                this.handleTopScoresClick();
+            } else if (this.gameState === 'nameInput') {
+                this.handleVirtualKeyboardClick();
             }
         });
 
@@ -812,6 +962,8 @@ class AirplaneGame {
                 // Handle splash screen touch
                 if (this.gameState === 'splash') {
                     this.updateButtonHover();
+                } else if (this.gameState === 'nameInput') {
+                    this.updateVirtualKeyboardHover();
                 }
                 
                 // Handle shooting on tap during gameplay
@@ -832,6 +984,11 @@ class AirplaneGame {
                     this.mousePos.x = touchX - rect.left;
                     this.mousePos.y = touchY - rect.top;
                     this.updateButtonHover();
+                    return;
+                } else if (this.gameState === 'nameInput') {
+                    this.mousePos.x = touchX - rect.left;
+                    this.mousePos.y = touchY - rect.top;
+                    this.updateVirtualKeyboardHover();
                     return;
                 }
                 
@@ -860,8 +1017,12 @@ class AirplaneGame {
                 e.preventDefault();
                 
                 if (isTouching && this.gameState === 'splash') {
-                    console.log(`Touch end - buttons hovered: start=${this.startButton.hovered}, exit=${this.exitButton.hovered}`);
+                    console.log(`Touch end - buttons hovered: start=${this.startButton.hovered}, topScores=${this.topScoresButton.hovered}`);
                     this.handleSplashClick();
+                } else if (isTouching && this.gameState === 'topScores') {
+                    this.handleTopScoresClick();
+                } else if (isTouching && this.gameState === 'nameInput') {
+                    this.handleVirtualKeyboardClick();
                 }
                 
                 isTouching = false;
@@ -875,14 +1036,32 @@ class AirplaneGame {
     }
     
     updateButtonHover() {
-        // Check start button hover
-        this.startButton.hovered = this.isPointInButton(this.mousePos, this.startButton);
+        if (this.gameState === 'splash') {
+            // Check start button hover
+            this.startButton.hovered = this.isPointInButton(this.mousePos, this.startButton);
+            
+            // Check top scores button hover
+            this.topScoresButton.hovered = this.isPointInButton(this.mousePos, this.topScoresButton);
+            
+            // Change cursor style
+            this.canvas.style.cursor = (this.startButton.hovered || this.topScoresButton.hovered) ? 'pointer' : 'default';
+        } else if (this.gameState === 'topScores') {
+            // Simple cursor style for top scores screen
+            this.canvas.style.cursor = 'pointer';
+        }
+    }
+    
+    updateVirtualKeyboardHover() {
+        let anyHovered = false;
         
-        // Check exit button hover
-        this.exitButton.hovered = this.isPointInButton(this.mousePos, this.exitButton);
+        for (let row of this.virtualKeyboard) {
+            for (let keyObj of row) {
+                keyObj.hovered = this.isPointInButton(this.mousePos, keyObj);
+                if (keyObj.hovered) anyHovered = true;
+            }
+        }
         
-        // Change cursor style
-        this.canvas.style.cursor = (this.startButton.hovered || this.exitButton.hovered) ? 'pointer' : 'default';
+        this.canvas.style.cursor = anyHovered ? 'pointer' : 'default';
     }
     
     isPointInButton(point, button) {
@@ -897,12 +1076,16 @@ class AirplaneGame {
             this.gameState = 'playing';
             this.initializeReactors();
             console.log('Game Started!');
-        } else if (this.exitButton.hovered) {
-            // In a real game, this would close the window
-            // For web, we'll just show an alert
-            alert('Thanks for playing!');
-            console.log('Exit button clicked');
+        } else if (this.topScoresButton.hovered) {
+            this.gameState = 'topScores';
+            console.log('Top Scores screen opened');
         }
+    }
+    
+    handleTopScoresClick() {
+        // Any click on top scores screen returns to splash
+        this.gameState = 'splash';
+        console.log('Returning to splash from top scores');
     }
     
 
@@ -913,6 +1096,12 @@ class AirplaneGame {
         // Handle game over state
         if (this.gameState === 'gameOver') {
             const currentTime = Date.now();
+            
+            // Prompt for high score name if needed
+            if (this.isNewHighScore) {
+                this.promptForPlayerName();
+            }
+            
             if (currentTime - this.gameOverTime >= this.gameOverDuration) {
                 this.gameState = 'splash';
                 this.resetGame();
@@ -1111,6 +1300,11 @@ class AirplaneGame {
                 
                 // Check if game over
                 if (this.currentHealth <= 0) {
+                    // Check for high score before switching to game over
+                    if (this.checkForHighScore()) {
+                        this.isNewHighScore = true;
+                    }
+                    
                     this.gameState = 'gameOver';
                     this.gameOverTime = Date.now();
                     console.log('Game Over! Health depleted.');
@@ -1271,6 +1465,10 @@ class AirplaneGame {
             this.renderGame();
         } else if (this.gameState === 'gameOver') {
             this.renderGameOver();
+        } else if (this.gameState === 'topScores') {
+            this.renderTopScores();
+        } else if (this.gameState === 'nameInput') {
+            this.renderNameInput();
         }
     }
     
@@ -1305,20 +1503,20 @@ class AirplaneGame {
             this.ctx.shadowBlur = 0;
         }
         
-        // Draw exit button
-        if (this.exitButtonImage) {
+        // Draw top scores button
+        if (this.topScoresButtonImage) {
             // Add glow effect if hovered
-            if (this.exitButton.hovered) {
-                this.ctx.shadowColor = '#ff0000';
+            if (this.topScoresButton.hovered) {
+                this.ctx.shadowColor = '#ffdd00';
                 this.ctx.shadowBlur = 10;
             }
             
             this.ctx.drawImage(
-                this.exitButtonImage,
-                this.exitButton.x,
-                this.exitButton.y,
-                this.exitButton.width,
-                this.exitButton.height
+                this.topScoresButtonImage,
+                this.topScoresButton.x,
+                this.topScoresButton.y,
+                this.topScoresButton.width,
+                this.topScoresButton.height
             );
             
             this.ctx.shadowBlur = 0;
@@ -1779,6 +1977,209 @@ class AirplaneGame {
         }
     }
     
+    renderTopScores() {
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.gameWidth, this.gameHeight);
+        
+        // Create gradient background
+        const gradient = this.ctx.createLinearGradient(0, 0, 0, this.gameHeight);
+        gradient.addColorStop(0, '#001122');
+        gradient.addColorStop(0.5, '#003366');
+        gradient.addColorStop(1, '#001122');
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.gameWidth, this.gameHeight);
+        
+        // Title
+        this.ctx.fillStyle = '#ffdd00';
+        this.ctx.font = `bold ${this.isMobile ? '32px' : '48px'} Courier New`;
+        this.ctx.textAlign = 'center';
+        this.ctx.shadowColor = '#ffdd00';
+        this.ctx.shadowBlur = 15;
+        this.ctx.fillText('🏆 TOP SCORES 🏆', this.gameWidth / 2, this.isMobile ? 80 : 120);
+        this.ctx.shadowBlur = 0;
+        
+        // Display top 3 scores
+        const startY = this.isMobile ? 150 : 200;
+        const lineHeight = this.isMobile ? 60 : 80;
+        
+        if (this.highScores.length === 0) {
+            // No scores yet
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = `${this.isMobile ? '18px' : '24px'} Courier New`;
+            this.ctx.fillText('No high scores yet!', this.gameWidth / 2, startY + 50);
+            this.ctx.fillText('Play the game to set a record!', this.gameWidth / 2, startY + 100);
+        } else {
+            // Display each high score
+            for (let i = 0; i < Math.min(3, this.highScores.length); i++) {
+                const score = this.highScores[i];
+                const rank = i + 1;
+                const y = startY + (i * lineHeight);
+                
+                // Rank with medal colors
+                let rankColor = '#cd6133'; // Bronze
+                if (rank === 1) rankColor = '#ffd700'; // Gold
+                else if (rank === 2) rankColor = '#c0c0c0'; // Silver
+                
+                this.ctx.fillStyle = rankColor;
+                this.ctx.font = `bold ${this.isMobile ? '24px' : '32px'} Courier New`;
+                this.ctx.fillText(`#${rank}`, this.gameWidth / 2 - (this.isMobile ? 120 : 150), y);
+                
+                // Player name
+                this.ctx.fillStyle = '#00ff00';
+                this.ctx.font = `bold ${this.isMobile ? '18px' : '24px'} Courier New`;
+                this.ctx.fillText(score.name, this.gameWidth / 2 - (this.isMobile ? 60 : 80), y);
+                
+                // Score
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.font = `bold ${this.isMobile ? '20px' : '28px'} Courier New`;
+                this.ctx.fillText(score.score.toString(), this.gameWidth / 2 + (this.isMobile ? 60 : 80), y);
+                
+                // Date (smaller text)
+                this.ctx.fillStyle = '#888888';
+                this.ctx.font = `${this.isMobile ? '12px' : '16px'} Courier New`;
+                this.ctx.fillText(score.date, this.gameWidth / 2 + (this.isMobile ? 120 : 150), y);
+            }
+        }
+        
+        // Instructions
+        this.ctx.fillStyle = '#ffff00';
+        this.ctx.font = `${this.isMobile ? '14px' : '18px'} Courier New`;
+        this.ctx.fillText(this.isMobile ? 'TAP anywhere to return' : 'CLICK anywhere to return to menu', 
+                         this.gameWidth / 2, this.gameHeight - (this.isMobile ? 30 : 50));
+        
+        this.ctx.textAlign = 'left';
+    }
+    
+    renderNameInput() {
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.gameWidth, this.gameHeight);
+        
+        // Create gradient background
+        const gradient = this.ctx.createLinearGradient(0, 0, 0, this.gameHeight);
+        gradient.addColorStop(0, '#001122');
+        gradient.addColorStop(0.5, '#003366');
+        gradient.addColorStop(1, '#001122');
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.gameWidth, this.gameHeight);
+        
+        // Celebration title
+        this.ctx.fillStyle = '#ffdd00';
+        this.ctx.font = `bold ${this.isMobile ? '28px' : '48px'} Courier New`;
+        this.ctx.textAlign = 'center';
+        this.ctx.shadowColor = '#ffdd00';
+        this.ctx.shadowBlur = 15;
+        this.ctx.fillText('🎉 NEW HIGH SCORE! 🎉', this.gameWidth / 2, this.isMobile ? 60 : 100);
+        this.ctx.shadowBlur = 0;
+        
+        // Score display
+        this.ctx.fillStyle = '#00ff00';
+        this.ctx.font = `bold ${this.isMobile ? '24px' : '36px'} Courier New`;
+        this.ctx.fillText(`Your Score: ${this.score}`, this.gameWidth / 2, this.isMobile ? 100 : 150);
+        
+        // Input prompt
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = `${this.isMobile ? '18px' : '24px'} Courier New`;
+        this.ctx.fillText('Enter your name:', this.gameWidth / 2, this.isMobile ? 140 : 200);
+        
+        // Input box
+        const inputBoxWidth = this.isMobile ? 250 : 350;
+        const inputBoxHeight = this.isMobile ? 40 : 50;
+        const inputBoxX = (this.gameWidth - inputBoxWidth) / 2;
+        const inputBoxY = this.isMobile ? 160 : 230;
+        
+        // Input box background
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(inputBoxX, inputBoxY, inputBoxWidth, inputBoxHeight);
+        this.ctx.strokeStyle = '#00ff00';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(inputBoxX, inputBoxY, inputBoxWidth, inputBoxHeight);
+        
+        // Input text
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = `${this.isMobile ? '20px' : '24px'} Courier New`;
+        this.ctx.textAlign = 'left';
+        const displayText = this.playerNameInput || '';
+        this.ctx.fillText(displayText, inputBoxX + 10, inputBoxY + inputBoxHeight - 12);
+        
+        // Blinking cursor
+        this.nameInputBlinkTime += 0.1;
+        if (Math.sin(this.nameInputBlinkTime) > 0) {
+            const textWidth = this.ctx.measureText(displayText).width;
+            this.ctx.fillStyle = '#00ff00';
+            this.ctx.fillRect(inputBoxX + 10 + textWidth + 2, inputBoxY + 8, 2, inputBoxHeight - 16);
+        }
+        
+        // Character limit indicator
+        this.ctx.fillStyle = this.playerNameInput.length >= this.maxNameLength ? '#ff4444' : '#888888';
+        this.ctx.font = `${this.isMobile ? '12px' : '14px'} Courier New`;
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(`${this.playerNameInput.length}/${this.maxNameLength}`, this.gameWidth / 2, inputBoxY + inputBoxHeight + 20);
+        
+        // Desktop instructions
+        if (!this.isMobile) {
+            this.ctx.fillStyle = '#ffff00';
+            this.ctx.font = '16px Courier New';
+            this.ctx.fillText('ENTER to save • ESCAPE to cancel', this.gameWidth / 2, this.gameHeight - 50);
+        }
+        
+        // Mobile virtual keyboard
+        if (this.isMobile) {
+            this.drawVirtualKeyboard();
+        }
+        
+        this.ctx.textAlign = 'left';
+    }
+    
+    drawVirtualKeyboard() {
+        const keyboardStartY = this.gameHeight * 0.5;
+        const keySpacing = 5;
+        const rowSpacing = 8;
+        
+        // Calculate keyboard layout
+        for (let rowIndex = 0; rowIndex < this.virtualKeyboard.length; rowIndex++) {
+            const row = this.virtualKeyboard[rowIndex];
+            const totalRowWidth = row.reduce((sum, key) => sum + key.width + keySpacing, -keySpacing);
+            const startX = (this.gameWidth - totalRowWidth) / 2;
+            
+            let currentX = startX;
+            const currentY = keyboardStartY + (rowIndex * (35 + rowSpacing));
+            
+            for (let keyObj of row) {
+                keyObj.x = currentX;
+                keyObj.y = currentY;
+                
+                // Draw key background
+                this.ctx.fillStyle = keyObj.hovered ? '#004400' : '#002200';
+                this.ctx.fillRect(keyObj.x, keyObj.y, keyObj.width, keyObj.height);
+                
+                // Draw key border
+                this.ctx.strokeStyle = keyObj.hovered ? '#00ff00' : '#006600';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect(keyObj.x, keyObj.y, keyObj.width, keyObj.height);
+                
+                // Draw key text
+                this.ctx.fillStyle = keyObj.hovered ? '#00ff00' : '#ffffff';
+                this.ctx.font = 'bold 12px Courier New';
+                this.ctx.textAlign = 'center';
+                
+                let displayText = keyObj.key;
+                if (keyObj.key === 'SPACE') displayText = 'SPACE';
+                else if (keyObj.key === 'DONE') displayText = '✓';
+                else if (keyObj.key === 'CANCEL') displayText = '✗';
+                
+                this.ctx.fillText(
+                    displayText,
+                    keyObj.x + keyObj.width / 2,
+                    keyObj.y + keyObj.height / 2 + 4
+                );
+                
+                currentX += keyObj.width + keySpacing;
+            }
+        }
+        
+        this.ctx.textAlign = 'left';
+    }
+    
     resetGame() {
         // Reset game state when returning to splash
         this.score = 0;
@@ -1797,6 +2198,12 @@ class AirplaneGame {
         this.lastReactorX = -200;
         this.shootCooldown = 0;
         this.canShoot = true;
+        this.isNewHighScore = false;
+        
+        // Reset name input
+        this.playerNameInput = '';
+        this.nameInputCursor = 0;
+        this.nameInputBlinkTime = 0;
         
         // Reset airplane position - adjust for mobile
         if (this.isMobile) {
