@@ -4,7 +4,7 @@ class AirplaneGame {
         this.ctx = this.canvas.getContext('2d');
         
         // Set browser title
-        document.title = "Operation Rising Lion";
+        document.title = "Operation Rising Lion - v1.0.1";
         
         // Check if device is mobile
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
