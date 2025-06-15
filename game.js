@@ -152,6 +152,17 @@ class AirplaneGame {
         this.loadingAssets = 0;
         this.totalAssets = 0;
         
+        // Music system
+        this.backgroundMusic = null;
+        this.isMusicMuted = false;
+        this.musicButton = {
+            x: 10,
+            y: this.gameHeight - 40,
+            width: 80,
+            height: 30,
+            hovered: false
+        };
+        
         // Initialize game
         this.init();
     }
@@ -159,6 +170,7 @@ class AirplaneGame {
     init() {
         this.showLoadingScreen();
         this.loadAssets();
+        this.loadMusic();
         this.setupEventListeners();
         this.initializeReactors();
     }
@@ -277,6 +289,38 @@ class AirplaneGame {
             };
             img.src = asset.src;
         });
+    }
+    
+    loadMusic() {
+        try {
+            this.backgroundMusic = new Audio('./assets/music.mp3');
+            this.backgroundMusic.loop = true;
+            this.backgroundMusic.volume = 0.5; // Set volume to 50%
+            this.backgroundMusic.preload = 'auto';
+            
+            // Handle loading errors
+            this.backgroundMusic.addEventListener('error', (e) => {
+                console.warn('Music file not found: ./assets/music.mp3');
+                console.log('To add music: place a music file named "music.mp3" in the assets folder');
+                this.backgroundMusic = null;
+                this.isMusicMuted = true; // Auto-mute if no music file
+            });
+            
+            // Handle loading success
+            this.backgroundMusic.addEventListener('loadeddata', () => {
+                console.log('Background music loaded successfully');
+            });
+            
+            // Handle can play through
+            this.backgroundMusic.addEventListener('canplaythrough', () => {
+                console.log('Background music ready to play');
+            });
+            
+            console.log('Attempting to load music from: ./assets/music.mp3');
+        } catch (error) {
+            console.error('Error creating Audio object:', error);
+            this.backgroundMusic = null;
+        }
     }
     
     onAssetLoaded(key, image) {
@@ -608,11 +652,13 @@ class AirplaneGame {
             // Submit the name
             await this.addHighScore(this.playerNameInput || 'Anonymous');
             this.isNewHighScore = false;
+            this.stopMusic();
             this.gameState = 'splash';
             this.resetGame();
         } else if (key === 'Escape' || key === 'CANCEL') {
             // Cancel - don't save high score
             this.isNewHighScore = false;
+            this.stopMusic();
             this.gameState = 'splash';
             this.resetGame();
         } else if (key === 'Backspace' || key === '⌫') {
@@ -971,6 +1017,7 @@ class AirplaneGame {
             
             // Handle Escape key - return to splash screen
             if (e.code === 'Escape' && this.gameState === 'playing') {
+                this.stopMusic();
                 this.gameState = 'splash';
                 this.resetGame();
                 console.log('Returned to splash screen');
@@ -981,7 +1028,7 @@ class AirplaneGame {
             this.keys[e.code] = false;
         });
         
-        // Mouse events for splash screen
+        // Mouse events for all screens
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mousePos.x = e.clientX - rect.left;
@@ -991,6 +1038,10 @@ class AirplaneGame {
                 this.updateButtonHover();
             } else if (this.gameState === 'nameInput') {
                 this.updateVirtualKeyboardHover();
+            } else if (this.gameState === 'playing') {
+                this.updateButtonHover();
+            } else if (this.gameState === 'topScores') {
+                this.updateButtonHover();
             }
         });
         
@@ -1001,6 +1052,11 @@ class AirplaneGame {
                 this.handleTopScoresClick();
             } else if (this.gameState === 'nameInput') {
                 this.handleVirtualKeyboardClick();
+            } else if (this.gameState === 'playing') {
+                // Handle music button clicks during gameplay
+                if (this.musicButton.hovered) {
+                    this.toggleMusic();
+                }
             }
         });
 
@@ -1032,7 +1088,11 @@ class AirplaneGame {
                 
                 // Handle shooting on tap during gameplay
                 if (this.gameState === 'playing') {
-                    this.shootRocket();
+                    // Check if touching music button first
+                    this.updateButtonHover();
+                    if (!this.musicButton.hovered) {
+                        this.shootRocket();
+                    }
                 }
             });
 
@@ -1058,6 +1118,9 @@ class AirplaneGame {
                 
                 // Handle gameplay movement
                 if (this.gameState === 'playing') {
+                    // Update music button hover during gameplay
+                    this.updateButtonHover();
+                    
                     const deltaX = touchX - touchStartX;
                     const deltaY = touchY - touchStartY;
 
@@ -1087,6 +1150,11 @@ class AirplaneGame {
                     this.handleTopScoresClick();
                 } else if (isTouching && this.gameState === 'nameInput') {
                     this.handleVirtualKeyboardClick();
+                } else if (isTouching && this.gameState === 'playing') {
+                    // Handle music button tap during gameplay
+                    if (this.musicButton.hovered) {
+                        this.toggleMusic();
+                    }
                 }
                 
                 isTouching = false;
@@ -1100,6 +1168,9 @@ class AirplaneGame {
     }
     
     updateButtonHover() {
+        // Check music button hover in all states
+        this.musicButton.hovered = this.isPointInButton(this.mousePos, this.musicButton);
+        
         if (this.gameState === 'splash') {
             // Check start button hover
             this.startButton.hovered = this.isPointInButton(this.mousePos, this.startButton);
@@ -1108,10 +1179,13 @@ class AirplaneGame {
             this.topScoresButton.hovered = this.isPointInButton(this.mousePos, this.topScoresButton);
             
             // Change cursor style
-            this.canvas.style.cursor = (this.startButton.hovered || this.topScoresButton.hovered) ? 'pointer' : 'default';
+            this.canvas.style.cursor = (this.startButton.hovered || this.topScoresButton.hovered || this.musicButton.hovered) ? 'pointer' : 'default';
         } else if (this.gameState === 'topScores') {
-            // Simple cursor style for top scores screen
-            this.canvas.style.cursor = 'pointer';
+            // Check music button and return area
+            this.canvas.style.cursor = this.musicButton.hovered ? 'pointer' : 'default';
+        } else if (this.gameState === 'playing') {
+            // Check music button during gameplay
+            this.canvas.style.cursor = this.musicButton.hovered ? 'pointer' : 'default';
         }
     }
     
@@ -1139,19 +1213,74 @@ class AirplaneGame {
         if (this.startButton.hovered) {
             this.gameState = 'playing';
             this.initializeReactors();
+            this.startMusic();
             console.log('Game Started!');
         } else if (this.topScoresButton.hovered) {
             this.gameState = 'topScores';
             // Refresh high scores when opening the screen
             await this.loadHighScores();
             console.log('Top Scores screen opened');
+        } else if (this.musicButton.hovered) {
+            this.toggleMusic();
         }
     }
     
     handleTopScoresClick() {
-        // Any click on top scores screen returns to splash
-        this.gameState = 'splash';
-        console.log('Returning to splash from top scores');
+        if (this.musicButton.hovered) {
+            this.toggleMusic();
+        } else {
+            // Any other click on top scores screen returns to splash
+            this.stopMusic();
+            this.gameState = 'splash';
+            console.log('Returning to splash from top scores');
+        }
+    }
+    
+    startMusic() {
+        if (this.backgroundMusic && !this.isMusicMuted) {
+            console.log('Attempting to start music...');
+            this.backgroundMusic.currentTime = 0; // Start from beginning
+            
+            const playPromise = this.backgroundMusic.play();
+            
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => {
+                        console.log('Music started successfully');
+                    })
+                    .catch(error => {
+                        console.warn('Could not start music (browser autoplay restriction):', error.name);
+                        console.log('User interaction required to play audio');
+                        // Music will start when user clicks the music button
+                    });
+            }
+        } else {
+            if (!this.backgroundMusic) {
+                console.warn('Background music not loaded');
+            }
+            if (this.isMusicMuted) {
+                console.log('Music is muted');
+            }
+        }
+    }
+    
+    stopMusic() {
+        if (this.backgroundMusic) {
+            this.backgroundMusic.pause();
+            this.backgroundMusic.currentTime = 0;
+        }
+    }
+    
+    toggleMusic() {
+        this.isMusicMuted = !this.isMusicMuted;
+        
+        if (this.isMusicMuted) {
+            this.stopMusic();
+        } else if (this.gameState === 'playing') {
+            this.startMusic();
+        }
+        
+        console.log('Music ' + (this.isMusicMuted ? 'muted' : 'unmuted'));
     }
     
 
@@ -1169,6 +1298,7 @@ class AirplaneGame {
             }
             
             if (currentTime - this.gameOverTime >= this.gameOverDuration) {
+                this.stopMusic();
                 this.gameState = 'splash';
                 this.resetGame();
             }
@@ -1587,10 +1717,11 @@ class AirplaneGame {
                 this.topScoresButton.height
             );
             
-            this.ctx.shadowBlur = 0;
+                        this.ctx.shadowBlur = 0;
         }
         
-
+        // Draw music button
+        this.drawMusicButton();
     }
     
     drawInstructionsOverlay() {
@@ -1944,6 +2075,9 @@ class AirplaneGame {
         // Draw health bar in top right
         this.drawHealthBar();
         
+        // Draw music button
+        this.drawMusicButton();
+        
         // Add mobile controls reminder during gameplay
         if (this.isMobile && this.gameState === 'playing') {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
@@ -2005,6 +2139,54 @@ class AirplaneGame {
         this.ctx.font = `${this.isMobile ? '10px' : '12px'} Courier New`;
         this.ctx.textAlign = 'center';
         this.ctx.fillText(`${this.currentHealth}/${this.maxHealth}`, barX + barWidth / 2, barY + barHeight + 15);
+        this.ctx.textAlign = 'left';
+    }
+    
+    drawMusicButton() {
+        // Draw music button background
+        this.ctx.fillStyle = this.musicButton.hovered ? 'rgba(100, 100, 100, 0.9)' : 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(this.musicButton.x, this.musicButton.y, this.musicButton.width, this.musicButton.height);
+        
+        // Draw border
+        this.ctx.strokeStyle = this.musicButton.hovered ? '#ffff00' : '#00ff00';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(this.musicButton.x, this.musicButton.y, this.musicButton.width, this.musicButton.height);
+        
+        // Draw music icon and text
+        this.ctx.textAlign = 'center';
+        
+        if (this.isMusicMuted || !this.backgroundMusic) {
+            // Muted state or no music file - red
+            this.ctx.fillStyle = '#ff4444';
+            this.ctx.font = 'bold 12px Courier New';
+            this.ctx.fillText('♪', this.musicButton.x + 20, this.musicButton.y + this.musicButton.height / 2 + 4);
+            
+            // Draw X over the music note
+            this.ctx.strokeStyle = '#ff4444';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.musicButton.x + 12, this.musicButton.y + 8);
+            this.ctx.lineTo(this.musicButton.x + 28, this.musicButton.y + 22);
+            this.ctx.moveTo(this.musicButton.x + 28, this.musicButton.y + 8);
+            this.ctx.lineTo(this.musicButton.x + 12, this.musicButton.y + 22);
+            this.ctx.stroke();
+            
+            // Text label - show different text for missing file
+            this.ctx.fillStyle = '#ff4444';
+            this.ctx.font = 'bold 8px Courier New';
+            this.ctx.fillText(!this.backgroundMusic ? 'N/A' : 'OFF', this.musicButton.x + 60, this.musicButton.y + this.musicButton.height / 2 + 3);
+        } else {
+            // Playing state - green
+            this.ctx.fillStyle = '#00ff00';
+            this.ctx.font = 'bold 12px Courier New';
+            this.ctx.fillText('♪♫', this.musicButton.x + 20, this.musicButton.y + this.musicButton.height / 2 + 4);
+            
+            // Text label
+            this.ctx.fillStyle = '#00ff00';
+            this.ctx.font = 'bold 8px Courier New';
+            this.ctx.fillText('ON', this.musicButton.x + 60, this.musicButton.y + this.musicButton.height / 2 + 3);
+        }
+        
         this.ctx.textAlign = 'left';
     }
     
@@ -2116,6 +2298,9 @@ class AirplaneGame {
                          this.gameWidth / 2, this.gameHeight - (this.isMobile ? 30 : 50));
         
         this.ctx.textAlign = 'left';
+        
+        // Draw music button
+        this.drawMusicButton();
     }
     
     renderNameInput() {
