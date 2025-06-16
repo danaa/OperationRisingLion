@@ -2298,17 +2298,6 @@ class AirplaneGame {
             this.ctx.fillText('No high scores yet!', this.gameWidth / 2, startY + 50);
             this.ctx.fillText('Play the game to set a record!', this.gameWidth / 2, startY + 100);
         } else {
-            // Column headers
-            this.ctx.fillStyle = '#ffdd00';
-            this.ctx.font = `bold ${this.isMobile ? '14px' : '18px'} Courier New`;
-            this.ctx.fillText('RANK', rankCol, startY - 30);
-            this.ctx.fillText('NAME', nameCol, startY - 30);
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText('SCORE', scoreCol, startY - 30);
-            this.ctx.textAlign = 'right';
-            this.ctx.fillText('DATE', dateCol, startY - 30);
-            this.ctx.textAlign = 'left';
-            
             // Display each high score
             for (let i = 0; i < Math.min(3, this.highScores.length); i++) {
                 const score = this.highScores[i];
@@ -2353,6 +2342,7 @@ class AirplaneGame {
         // Instructions
         this.ctx.fillStyle = '#ffff00';
         this.ctx.font = `${this.isMobile ? '14px' : '18px'} Courier New`;
+        this.ctx.textAlign = 'center';
         this.ctx.fillText(this.isMobile ? 'TAP anywhere to return' : 'CLICK anywhere to return to menu', 
                          this.gameWidth / 2, this.gameHeight - (this.isMobile ? 30 : 50));
         
