@@ -2283,52 +2283,82 @@ class AirplaneGame {
         
         // Display top 3 scores
         const startY = this.isMobile ? 150 : 200;
-        const lineHeight = this.isMobile ? 70 : 80;
+        const lineHeight = this.isMobile ? 50 : 60;
         
         if (this.highScores.length === 0) {
-            // No scores yet
-            this.ctx.fillStyle = '#ffffff';
+            // No scores yet - styled message
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
             this.ctx.font = `${this.isMobile ? '18px' : '24px'} Courier New`;
-            this.ctx.fillText('No high scores yet!', this.gameWidth / 2, startY + 50);
-            this.ctx.fillText('Play the game to set a record!', this.gameWidth / 2, startY + 100);
+            this.ctx.fillText('⚠️ NO RECORDS FOUND ⚠️', this.gameWidth / 2, startY + 50);
+            this.ctx.fillStyle = '#00ff00';
+            this.ctx.font = `${this.isMobile ? '14px' : '18px'} Courier New`;
+            this.ctx.fillText('ENTER THE BATTLEFIELD TO SET A RECORD!', this.gameWidth / 2, startY + 100);
         } else {
-            // Display each high score
+            // Display each high score with military styling
             for (let i = 0; i < Math.min(3, this.highScores.length); i++) {
                 const score = this.highScores[i];
                 const rank = i + 1;
                 const y = startY + (i * lineHeight);
                 
-                // Rank with medal colors
+                // Draw background bar for each entry
+                const barWidth = this.isMobile ? this.gameWidth - 40 : this.gameWidth - 100;
+                const barHeight = this.isMobile ? 35 : 40;
+                const barX = this.isMobile ? 20 : 50;
+                const barY = y - (this.isMobile ? 20 : 25);
+                
+                // Background with gradient
+                const gradient = this.ctx.createLinearGradient(barX, barY, barX + barWidth, barY);
+                if (rank === 1) {
+                    gradient.addColorStop(0, 'rgba(255, 215, 0, 0.3)');
+                    gradient.addColorStop(1, 'rgba(255, 215, 0, 0.1)');
+                } else if (rank === 2) {
+                    gradient.addColorStop(0, 'rgba(192, 192, 192, 0.3)');
+                    gradient.addColorStop(1, 'rgba(192, 192, 192, 0.1)');
+                } else {
+                    gradient.addColorStop(0, 'rgba(205, 97, 51, 0.3)');
+                    gradient.addColorStop(1, 'rgba(205, 97, 51, 0.1)');
+                }
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(barX, barY, barWidth, barHeight);
+                
+                // Border
+                this.ctx.strokeStyle = rank === 1 ? '#ffd700' : rank === 2 ? '#c0c0c0' : '#cd6133';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(barX, barY, barWidth, barHeight);
+                
+                // Rank with medal emoji and colors
                 let rankColor = '#cd6133'; // Bronze
-                if (rank === 1) rankColor = '#ffd700'; // Gold
-                else if (rank === 2) rankColor = '#c0c0c0'; // Silver
+                let medalEmoji = '🥉';
+                if (rank === 1) { rankColor = '#ffd700'; medalEmoji = '🥇'; }
+                else if (rank === 2) { rankColor = '#c0c0c0'; medalEmoji = '🥈'; }
                 
                 this.ctx.fillStyle = rankColor;
-                this.ctx.font = `bold ${this.isMobile ? '20px' : '28px'} Courier New`;
-                this.ctx.fillText(`#${rank}`, this.isMobile ? 50 : 100, y);
+                this.ctx.font = `bold ${this.isMobile ? '18px' : '22px'} Courier New`;
+                this.ctx.fillText(`${medalEmoji}#${rank}`, barX + 5, y);
                 
                 // Player name - truncate if too long to prevent overlap
                 this.ctx.fillStyle = '#00ff00';
-                this.ctx.font = `bold ${this.isMobile ? '16px' : '20px'} Courier New`;
+                this.ctx.font = `bold ${this.isMobile ? '14px' : '18px'} Courier New`;
                 let displayName = score.name;
-                if (displayName.length > (this.isMobile ? 8 : 12)) {
-                    displayName = displayName.substring(0, this.isMobile ? 8 : 12) + '...';
+                if (displayName.length > (this.isMobile ? 10 : 15)) {
+                    displayName = displayName.substring(0, this.isMobile ? 10 : 15) + '...';
                 }
-                this.ctx.fillText(displayName, this.isMobile ? 100 : 180, y);
+                this.ctx.fillText(`${displayName}`, barX + (this.isMobile ? 70 : 90), y);
                 
-                // Score
+                // Score with military styling
                 this.ctx.fillStyle = '#ffffff';
-                this.ctx.font = `bold ${this.isMobile ? '18px' : '24px'} Courier New`;
-                this.ctx.fillText(score.score.toString(), this.isMobile ? this.gameWidth - 120 : this.gameWidth - 200, y);
+                this.ctx.font = `bold ${this.isMobile ? '16px' : '20px'} Courier New`;
+                this.ctx.textAlign = 'right';
+                this.ctx.fillText(`${score.score} PTS`, barX + barWidth - (this.isMobile ? 5 : 10), y);
+                this.ctx.textAlign = 'left';
                 
-                // Date (smaller text, positioned below on mobile)
+                // Date in smaller text
                 this.ctx.fillStyle = '#888888';
-                this.ctx.font = `${this.isMobile ? '10px' : '14px'} Courier New`;
-                if (this.isMobile) {
-                    this.ctx.fillText(score.date, 100, y + 15);
-                } else {
-                    this.ctx.fillText(score.date, this.gameWidth - 120, y);
-                }
+                this.ctx.font = `${this.isMobile ? '9px' : '12px'} Courier New`;
+                this.ctx.textAlign = 'right';
+                this.ctx.fillText(score.date, barX + barWidth - (this.isMobile ? 5 : 10), y + (this.isMobile ? 12 : 15));
+                this.ctx.textAlign = 'left';
             }
         }
         
