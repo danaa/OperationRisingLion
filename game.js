@@ -2283,7 +2283,7 @@ class AirplaneGame {
         
         // Display top 3 scores
         const startY = this.isMobile ? 150 : 200;
-        const lineHeight = this.isMobile ? 60 : 80;
+        const lineHeight = this.isMobile ? 70 : 80;
         
         if (this.highScores.length === 0) {
             // No scores yet
@@ -2304,23 +2304,31 @@ class AirplaneGame {
                 else if (rank === 2) rankColor = '#c0c0c0'; // Silver
                 
                 this.ctx.fillStyle = rankColor;
-                this.ctx.font = `bold ${this.isMobile ? '24px' : '32px'} Courier New`;
-                this.ctx.fillText(`#${rank}`, this.gameWidth / 2 - (this.isMobile ? 120 : 150), y);
+                this.ctx.font = `bold ${this.isMobile ? '20px' : '28px'} Courier New`;
+                this.ctx.fillText(`#${rank}`, this.isMobile ? 50 : 100, y);
                 
-                // Player name
+                // Player name - truncate if too long to prevent overlap
                 this.ctx.fillStyle = '#00ff00';
-                this.ctx.font = `bold ${this.isMobile ? '18px' : '24px'} Courier New`;
-                this.ctx.fillText(score.name, this.gameWidth / 2 - (this.isMobile ? 60 : 80), y);
+                this.ctx.font = `bold ${this.isMobile ? '16px' : '20px'} Courier New`;
+                let displayName = score.name;
+                if (displayName.length > (this.isMobile ? 8 : 12)) {
+                    displayName = displayName.substring(0, this.isMobile ? 8 : 12) + '...';
+                }
+                this.ctx.fillText(displayName, this.isMobile ? 100 : 180, y);
                 
                 // Score
                 this.ctx.fillStyle = '#ffffff';
-                this.ctx.font = `bold ${this.isMobile ? '20px' : '28px'} Courier New`;
-                this.ctx.fillText(score.score.toString(), this.gameWidth / 2 + (this.isMobile ? 60 : 80), y);
+                this.ctx.font = `bold ${this.isMobile ? '18px' : '24px'} Courier New`;
+                this.ctx.fillText(score.score.toString(), this.isMobile ? this.gameWidth - 120 : this.gameWidth - 200, y);
                 
-                // Date (smaller text)
+                // Date (smaller text, positioned below on mobile)
                 this.ctx.fillStyle = '#888888';
-                this.ctx.font = `${this.isMobile ? '12px' : '16px'} Courier New`;
-                this.ctx.fillText(score.date, this.gameWidth / 2 + (this.isMobile ? 120 : 150), y);
+                this.ctx.font = `${this.isMobile ? '10px' : '14px'} Courier New`;
+                if (this.isMobile) {
+                    this.ctx.fillText(score.date, 100, y + 15);
+                } else {
+                    this.ctx.fillText(score.date, this.gameWidth - 120, y);
+                }
             }
         }
         
