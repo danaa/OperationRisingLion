@@ -2283,7 +2283,13 @@ class AirplaneGame {
         
         // Display top 3 scores
         const startY = this.isMobile ? 150 : 200;
-        const lineHeight = this.isMobile ? 55 : 65;
+        const lineHeight = this.isMobile ? 50 : 60;
+        
+        // Define column positions
+        const rankCol = this.isMobile ? 40 : 80;
+        const nameCol = this.isMobile ? 100 : 200;
+        const scoreCol = this.isMobile ? this.gameWidth - 120 : this.gameWidth - 200;
+        const dateCol = this.isMobile ? this.gameWidth - 40 : this.gameWidth - 80;
         
         if (this.highScores.length === 0) {
             // No scores yet
@@ -2292,6 +2298,17 @@ class AirplaneGame {
             this.ctx.fillText('No high scores yet!', this.gameWidth / 2, startY + 50);
             this.ctx.fillText('Play the game to set a record!', this.gameWidth / 2, startY + 100);
         } else {
+            // Column headers
+            this.ctx.fillStyle = '#ffdd00';
+            this.ctx.font = `bold ${this.isMobile ? '14px' : '18px'} Courier New`;
+            this.ctx.fillText('RANK', rankCol, startY - 30);
+            this.ctx.fillText('NAME', nameCol, startY - 30);
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('SCORE', scoreCol, startY - 30);
+            this.ctx.textAlign = 'right';
+            this.ctx.fillText('DATE', dateCol, startY - 30);
+            this.ctx.textAlign = 'left';
+            
             // Display each high score
             for (let i = 0; i < Math.min(3, this.highScores.length); i++) {
                 const score = this.highScores[i];
@@ -2304,27 +2321,32 @@ class AirplaneGame {
                 else if (rank === 2) rankColor = '#c0c0c0'; // Silver
                 
                 this.ctx.fillStyle = rankColor;
-                this.ctx.font = `bold ${this.isMobile ? '22px' : '30px'} Courier New`;
-                this.ctx.fillText(`#${rank}`, this.isMobile ? 60 : 120, y);
+                this.ctx.font = `bold ${this.isMobile ? '20px' : '26px'} Courier New`;
+                this.ctx.fillText(`#${rank}`, rankCol, y);
                 
-                // Player name
+                // Player name (column 2)
                 this.ctx.fillStyle = '#00ff00';
-                this.ctx.font = `bold ${this.isMobile ? '16px' : '22px'} Courier New`;
+                this.ctx.font = `bold ${this.isMobile ? '16px' : '20px'} Courier New`;
                 let displayName = score.name;
-                if (displayName.length > (this.isMobile ? 10 : 12)) {
-                    displayName = displayName.substring(0, this.isMobile ? 10 : 12) + '...';
+                if (displayName.length > (this.isMobile ? 8 : 12)) {
+                    displayName = displayName.substring(0, this.isMobile ? 8 : 12) + '...';
                 }
-                this.ctx.fillText(displayName, this.isMobile ? 110 : 200, y);
+                this.ctx.fillText(displayName, nameCol, y);
                 
-                // Score
+                // Score (column 3 - centered)
                 this.ctx.fillStyle = '#ffffff';
-                this.ctx.font = `bold ${this.isMobile ? '18px' : '26px'} Courier New`;
-                this.ctx.fillText(score.score.toString(), this.isMobile ? this.gameWidth - 100 : this.gameWidth - 160, y);
+                this.ctx.font = `bold ${this.isMobile ? '18px' : '24px'} Courier New`;
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(score.score.toString(), scoreCol, y);
                 
-                // Date (smaller text)
+                // Date (column 4 - right aligned)
                 this.ctx.fillStyle = '#888888';
-                this.ctx.font = `${this.isMobile ? '11px' : '15px'} Courier New`;
-                this.ctx.fillText(score.date, this.isMobile ? 110 : 200, y + (this.isMobile ? 18 : 22));
+                this.ctx.font = `${this.isMobile ? '12px' : '16px'} Courier New`;
+                this.ctx.textAlign = 'right';
+                this.ctx.fillText(score.date, dateCol, y);
+                
+                // Reset text alignment
+                this.ctx.textAlign = 'left';
             }
         }
         
