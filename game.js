@@ -2311,11 +2311,13 @@ class AirplaneGame {
                 
                 this.ctx.fillStyle = rankColor;
                 this.ctx.font = `bold ${this.isMobile ? '20px' : '26px'} Courier New`;
+                this.ctx.textAlign = 'left';
                 this.ctx.fillText(`#${rank}`, rankCol, y);
                 
                 // Player name (column 2)
                 this.ctx.fillStyle = '#00ff00';
                 this.ctx.font = `bold ${this.isMobile ? '16px' : '20px'} Courier New`;
+                this.ctx.textAlign = 'left';
                 let displayName = score.name;
                 if (displayName.length > (this.isMobile ? 8 : 12)) {
                     displayName = displayName.substring(0, this.isMobile ? 8 : 12) + '...';
