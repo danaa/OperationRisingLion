@@ -24,6 +24,13 @@ class AirplaneGame {
         this.startButton = { x: 0, y: 0, width: 200, height: 50, hovered: false };
         this.topScoresButton = { x: 0, y: 0, width: 200, height: 50, hovered: false };
 
+        // Mobile touch tracking (airplane follows finger X, tap = shoot)
+        this.touchActive    = false;
+        this.touchCurrentX  = 0;
+        this.touchStartTime = 0;
+        this.touchStartX    = 0;
+        this.touchStartY    = 0;
+
         // Adjust canvas size for mobile (vertical orientation)
         if (this.isMobile) {
             // Simple mobile setup - vertical orientation
@@ -664,7 +671,7 @@ class AirplaneGame {
                 key: key,
                 x: 0, // Will be calculated in renderNameInput
                 y: 0, // Will be calculated in renderNameInput
-                width: key === 'SPACE' ? 120 : (key === 'DONE' || key === 'CANCEL' ? 80 : 35),
+                width: key === 'SPACE' ? 110 : (key === 'DONE' || key === 'CANCEL' ? 72 : 30),
                 height: 35,
                 hovered: false,
                 row: rowIndex,
@@ -1088,106 +1095,86 @@ class AirplaneGame {
 
         // Touch events for mobile only
         if (this.isMobile) {
-            let touchStartX = 0;
-            let touchStartY = 0;
             let isTouching = false;
-            const minSwipeDistance = 30; // Minimum distance for a swipe
+
+            const getPos = (touch) => {
+                const rect = this.canvas.getBoundingClientRect();
+                return {
+                    x: (touch.clientX - rect.left) * (this.gameWidth  / rect.width),
+                    y: (touch.clientY - rect.top)  * (this.gameHeight / rect.height)
+                };
+            };
 
             this.canvas.addEventListener('touchstart', (e) => {
-                e.preventDefault(); // Prevent scrolling
+                e.preventDefault();
                 isTouching = true;
-                
-                const rect = this.canvas.getBoundingClientRect();
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
-                
-                // Update mouse position for button detection
-                this.mousePos.x = touchStartX - rect.left;
-                this.mousePos.y = touchStartY - rect.top;
-                
-                // Handle splash screen touch
+                const pos = getPos(e.touches[0]);
+                this.mousePos.x = pos.x;
+                this.mousePos.y = pos.y;
+
                 if (this.gameState === 'splash') {
                     this.updateButtonHover();
                 } else if (this.gameState === 'nameInput') {
                     this.updateVirtualKeyboardHover();
-                }
-                
-                // Handle shooting on tap during gameplay
-                if (this.gameState === 'playing') {
-                    // Check if touching music button first
+                } else if (this.gameState === 'playing') {
                     this.updateButtonHover();
-                    if (!this.musicButton.hovered) {
-                        this.shootRocket();
-                    }
+                    this.touchActive    = true;
+                    this.touchCurrentX  = pos.x;
+                    this.touchStartX    = pos.x;
+                    this.touchStartY    = pos.y;
+                    this.touchStartTime = Date.now();
+                } else if (this.gameState === 'topScores') {
+                    this.updateButtonHover();
                 }
             });
 
             this.canvas.addEventListener('touchmove', (e) => {
-                e.preventDefault(); // Prevent scrolling
-                
-                const rect = this.canvas.getBoundingClientRect();
-                const touchX = e.touches[0].clientX;
-                const touchY = e.touches[0].clientY;
-                
-                // Handle splash screen touch move
-                if (this.gameState === 'splash') {
-                    this.mousePos.x = touchX - rect.left;
-                    this.mousePos.y = touchY - rect.top;
-                    this.updateButtonHover();
-                    return;
-                } else if (this.gameState === 'nameInput') {
-                    this.mousePos.x = touchX - rect.left;
-                    this.mousePos.y = touchY - rect.top;
-                    this.updateVirtualKeyboardHover();
-                    return;
-                }
-                
-                // Handle gameplay movement
-                if (this.gameState === 'playing') {
-                    // Update music button hover during gameplay
-                    this.updateButtonHover();
-                    
-                    const deltaX = touchX - touchStartX;
-                    const deltaY = touchY - touchStartY;
+                e.preventDefault();
+                const pos = getPos(e.touches[0]);
+                this.mousePos.x = pos.x;
+                this.mousePos.y = pos.y;
 
-                    // Only handle horizontal movement
-                    if (Math.abs(deltaX) > minSwipeDistance) {
-                        // Move airplane based on swipe direction
-                        if (deltaX > 0) {
-                            // Swipe right
-                            this.airplane.x = Math.min(this.airplane.x + this.airplane.speed * 2, 
-                                this.gameWidth - this.airplane.width);
-                        } else {
-                            // Swipe left
-                            this.airplane.x = Math.max(this.airplane.x - this.airplane.speed * 2, 0);
-                        }
-                        touchStartX = touchX; // Update start position for continuous movement
-                    }
+                if (this.gameState === 'splash') {
+                    this.updateButtonHover();
+                } else if (this.gameState === 'nameInput') {
+                    this.updateVirtualKeyboardHover();
+                } else if (this.gameState === 'playing') {
+                    this.touchCurrentX = pos.x;
+                    this.updateButtonHover();
                 }
             });
 
             this.canvas.addEventListener('touchend', (e) => {
                 e.preventDefault();
-                
-                if (isTouching && this.gameState === 'splash') {
-                    console.log(`Touch end - buttons hovered: start=${this.startButton.hovered}, topScores=${this.topScoresButton.hovered}`);
-                    this.handleSplashClick();
-                } else if (isTouching && this.gameState === 'topScores') {
-                    this.handleTopScoresClick();
-                } else if (isTouching && this.gameState === 'nameInput') {
-                    this.handleVirtualKeyboardClick();
-                } else if (isTouching && this.gameState === 'playing') {
-                    // Handle music button tap during gameplay
-                    if (this.musicButton.hovered) {
-                        this.toggleMusic();
+
+                if (this.gameState === 'playing') {
+                    const elapsed = Date.now() - this.touchStartTime;
+                    const dx = Math.abs(this.mousePos.x - this.touchStartX);
+                    const dy = Math.abs(this.mousePos.y - this.touchStartY);
+                    // Quick tap (< 200ms, < 20px movement) = shoot
+                    if (elapsed < 200 && dx < 20 && dy < 20) {
+                        this.shootRocket();
+                    }
+                    if (e.touches.length === 0) {
+                        this.touchActive = false;
                     }
                 }
-                
-                isTouching = false;
+
+                if (isTouching) {
+                    if (this.gameState === 'splash')          this.handleSplashClick();
+                    else if (this.gameState === 'topScores')  this.handleTopScoresClick();
+                    else if (this.gameState === 'nameInput')  this.handleVirtualKeyboardClick();
+                }
+
+                if (e.touches.length === 0) {
+                    isTouching = false;
+                    this.touchActive = false;
+                }
             });
 
             this.canvas.addEventListener('touchcancel', (e) => {
                 e.preventDefault();
+                this.touchActive = false;
                 isTouching = false;
             });
         }
@@ -1390,6 +1377,12 @@ class AirplaneGame {
         // Handle shooting
         if (this.keys['Space'] && this.canShoot) {
             this.shootRocket();
+        }
+
+        // Mobile: airplane X follows touch position
+        if (this.isMobile && this.touchActive) {
+            const targetX = this.touchCurrentX - this.airplane.width / 2;
+            this.airplane.x = Math.max(0, Math.min(this.gameWidth - this.airplane.width, targetX));
         }
     }
     
@@ -1711,9 +1704,17 @@ class AirplaneGame {
         // Clear canvas
         this.ctx.clearRect(0, 0, this.gameWidth, this.gameHeight);
         
-        // Draw splash background
+        // Draw splash background (aspect-ratio preserving — scale to fill width)
         if (this.splashImage) {
-            this.ctx.drawImage(this.splashImage, 0, 0, this.gameWidth, this.gameHeight);
+            const img = this.splashImage;
+            const scale = this.gameWidth / img.width;
+            const drawH = img.height * scale;
+            const drawY = drawH < this.gameHeight ? (this.gameHeight - drawH) / 2 : 0;
+            if (drawY > 0) {
+                this.ctx.fillStyle = '#001122';
+                this.ctx.fillRect(0, 0, this.gameWidth, this.gameHeight);
+            }
+            this.ctx.drawImage(img, 0, drawY, this.gameWidth, drawH);
         }
         
         // Draw instructions overlay on bottom right corner
@@ -1792,9 +1793,9 @@ class AirplaneGame {
             this.ctx.fillStyle = '#ffffff';
             this.ctx.font = '10px Courier New';
             textY += lineHeight;
-            this.ctx.fillText('• TAP to shoot missiles', textX, textY);
+            this.ctx.fillText('• TAP screen to shoot', textX, textY);
             textY += lineHeight;
-            this.ctx.fillText('• SWIPE LEFT/RIGHT to move', textX, textY);
+            this.ctx.fillText('• DRAG finger to move plane', textX, textY);
             textY += lineHeight;
             this.ctx.fillText('• DODGE red AA gun bullets!', textX, textY);
         } else {
@@ -2115,19 +2116,6 @@ class AirplaneGame {
         // Draw music button
         this.drawMusicButton();
         
-        // Add mobile controls reminder during gameplay
-        if (this.isMobile && this.gameState === 'playing') {
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            this.ctx.fillRect(this.gameWidth - 110, 10, 100, 50);
-            this.ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
-            this.ctx.strokeRect(this.gameWidth - 110, 10, 100, 50);
-            
-            this.ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
-            this.ctx.font = '10px Courier New';
-            this.ctx.fillText('TAP: Shoot', this.gameWidth - 105, 25);
-            this.ctx.fillText('SWIPE: Move', this.gameWidth - 105, 38);
-            this.ctx.fillText('ESC: Menu', this.gameWidth - 105, 51);
-        }
         
         // Show loading progress if still loading
         if (!this.assetsLoaded) {
