@@ -273,7 +273,7 @@ class AirplaneGame {
     
     loadAssets() {
         const assetsToLoad = [
-            { key: 'splash', src: './assets/splash.png' },
+            { key: 'splash', src: this.isMobile ? './assets/mobileSplash.png' : './assets/splash.png' },
             { key: 'start_button', src: './assets/start.png' },     // Changed from start_button.png
             { key: 'top_scores_button', src: './assets/top.png' },  // Top scores button
             { key: 'airplane', src: './assets/airplane.png' },
