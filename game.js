@@ -20,9 +20,10 @@ class AirplaneGame {
             viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
         }
         
-        // Initialize buttons early so updateMobilePositions can set them during setupMobileGame
+        // Initialize early so updateMobilePositions can access them during setupMobileGame
         this.startButton = { x: 0, y: 0, width: 200, height: 50, hovered: false };
         this.topScoresButton = { x: 0, y: 0, width: 200, height: 50, hovered: false };
+        this.airplane = { x: 0, y: 0, width: 100, height: 120, speed: 5, image: null };
 
         // Mobile touch tracking (airplane follows finger X, tap = shoot)
         this.touchActive    = false;
