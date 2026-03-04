@@ -1703,14 +1703,15 @@ class AirplaneGame {
         // Draw splash background (aspect-ratio preserving — scale to fill width)
         if (this.splashImage) {
             const img = this.splashImage;
-            const scale = this.gameWidth / img.width;
+            // Cover: scale to fill entire canvas, crop overflow (centered)
+            const scaleX = this.gameWidth / img.width;
+            const scaleY = this.gameHeight / img.height;
+            const scale = Math.max(scaleX, scaleY);
+            const drawW = img.width * scale;
             const drawH = img.height * scale;
-            const drawY = drawH < this.gameHeight ? (this.gameHeight - drawH) / 2 : 0;
-            if (drawY > 0) {
-                this.ctx.fillStyle = '#001122';
-                this.ctx.fillRect(0, 0, this.gameWidth, this.gameHeight);
-            }
-            this.ctx.drawImage(img, 0, drawY, this.gameWidth, drawH);
+            const drawX = (this.gameWidth - drawW) / 2;
+            const drawY = (this.gameHeight - drawH) / 2;
+            this.ctx.drawImage(img, drawX, drawY, drawW, drawH);
         }
         
         // Draw instructions overlay on bottom right corner
