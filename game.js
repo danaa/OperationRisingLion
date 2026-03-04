@@ -2525,7 +2525,19 @@ class AirplaneGame {
     }
 }
 
+// Global error popup for mobile debugging
+window.addEventListener('error', (e) => {
+    alert('ERROR: ' + e.message + '\nFile: ' + (e.filename || '?').split('/').pop() + ':' + e.lineno);
+});
+window.addEventListener('unhandledrejection', (e) => {
+    alert('PROMISE ERROR: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
+});
+
 // Start the game when the page loads
 window.addEventListener('load', () => {
-    new AirplaneGame();
+    try {
+        new AirplaneGame();
+    } catch (e) {
+        alert('INIT ERROR: ' + e.message + '\n' + (e.stack ? e.stack.split('\n').slice(0,3).join('\n') : ''));
+    }
 }); 
