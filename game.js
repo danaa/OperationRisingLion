@@ -586,7 +586,7 @@ class AirplaneGame {
                 .from('high_scores')
                 .select('player_name, score, created_at')
                 .order('score', { ascending: false })
-                .limit(3);
+                .limit(10);
             
             if (error) throw error;
             
@@ -608,9 +608,9 @@ class AirplaneGame {
         // Refresh high scores from database first
         await this.loadHighScores();
         
-        // Check if current score qualifies for top 3
-        if (this.highScores.length < 3) {
-            return true; // Always qualify if less than 3 scores
+        // Check if current score qualifies for top 10
+        if (this.highScores.length < 10) {
+            return true; // Always qualify if less than 10 scores
         }
         
         // Check if score is higher than the lowest high score
@@ -2269,8 +2269,8 @@ class AirplaneGame {
         this.ctx.fillText('🏆 TOP SCORES 🏆', this.gameWidth / 2, this.isMobile ? 80 : 120);
         this.ctx.shadowBlur = 0;
         
-        // Display top 3 scores
-        const startY = this.isMobile ? 150 : 200;
+        // Display top 10 scores
+        const startY = this.isMobile ? 110 : 155;
         const lineHeight = this.isMobile ? 50 : 60;
         
         // Define column positions
@@ -2287,15 +2287,16 @@ class AirplaneGame {
             this.ctx.fillText('Play the game to set a record!', this.gameWidth / 2, startY + 100);
         } else {
             // Display each high score
-            for (let i = 0; i < Math.min(3, this.highScores.length); i++) {
+            for (let i = 0; i < Math.min(10, this.highScores.length); i++) {
                 const score = this.highScores[i];
                 const rank = i + 1;
                 const y = startY + (i * lineHeight);
-                
+
                 // Rank with medal colors
-                let rankColor = '#cd6133'; // Bronze
+                let rankColor = '#aaaaaa'; // Default grey
                 if (rank === 1) rankColor = '#ffd700'; // Gold
                 else if (rank === 2) rankColor = '#c0c0c0'; // Silver
+                else if (rank === 3) rankColor = '#cd6133'; // Bronze
                 
                 this.ctx.fillStyle = rankColor;
                 this.ctx.font = `bold ${this.isMobile ? '20px' : '26px'} Courier New`;
