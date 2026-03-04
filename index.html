@@ -44,7 +44,8 @@
 </head>
 <body>
     <canvas id="gameCanvas" width="1200" height="800"></canvas>
-    <script src="config.js"></script>
+    <!-- config.js is gitignored; for local dev copy config.example.js → config.js -->
+    <script src="config.js" onerror="console.info('config.js not found, using injected credentials')"></script>
     <script src="game.js"></script>
 </body>
 </html> 

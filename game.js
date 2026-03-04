@@ -20,6 +20,10 @@ class AirplaneGame {
             viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
         }
         
+        // Initialize buttons early so updateMobilePositions can set them during setupMobileGame
+        this.startButton = { x: 0, y: 0, width: 200, height: 50, hovered: false };
+        this.topScoresButton = { x: 0, y: 0, width: 200, height: 50, hovered: false };
+
         // Adjust canvas size for mobile (vertical orientation)
         if (this.isMobile) {
             // Simple mobile setup - vertical orientation
