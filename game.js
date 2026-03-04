@@ -50,13 +50,8 @@ class AirplaneGame {
         this.startButtonImage = null;
         this.topScoresButtonImage = null;
         
-        // Button properties - will be set properly in updateMobilePositions for mobile
-        if (this.isMobile) {
-            // Initialize with placeholder values - will be updated in setupMobileCanvas
-            this.startButton = { x: 0, y: 0, width: 200, height: 50, hovered: false };
-            this.topScoresButton = { x: 0, y: 0, width: 200, height: 50, hovered: false };
-        } else {
-            // Desktop layout (original positioning)
+        // Desktop button positions (mobile positions already set by updateMobilePositions above)
+        if (!this.isMobile) {
             this.startButton = {
                 x: this.gameWidth / 6 - 85,
                 y: this.gameHeight / 2 + 100,
@@ -64,7 +59,7 @@ class AirplaneGame {
                 height: 60,
                 hovered: false
             };
-            
+
             this.topScoresButton = {
                 x: this.gameWidth / 6 - 85,
                 y: this.gameHeight / 2 + 180,
