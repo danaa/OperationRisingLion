@@ -241,14 +241,14 @@ class AirplaneGame {
         const buttonWidth = Math.min(200, this.gameWidth - 40);
         const buttonHeight = 50;
         
-        // Position buttons in lower portion of vertical screen
+        // Position buttons at the top, above the splash image
         this.startButton.x = (this.gameWidth - buttonWidth) / 2;
-        this.startButton.y = this.gameHeight * 0.7; // 70% down the screen
+        this.startButton.y = 20;
         this.startButton.width = buttonWidth;
         this.startButton.height = buttonHeight;
-        
+
         this.topScoresButton.x = (this.gameWidth - buttonWidth) / 2;
-        this.topScoresButton.y = this.gameHeight * 0.7 + 70; // Below start button
+        this.topScoresButton.y = 80;
         this.topScoresButton.width = buttonWidth;
         this.topScoresButton.height = buttonHeight;
         
