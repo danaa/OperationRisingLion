@@ -1000,7 +1000,7 @@ class AirplaneGame {
             flipped: flipped,
             destroyed: false,
             spawnTime: Date.now(), // Track when it was spawned for smoother appearance
-            lastShotTime: 0, // Track when it last shot
+            lastShotTime: Date.now(), // Delay first shot so player has time to react
             shootInterval: 1500 + Math.random() * 1500 // Random shooting interval (1.5-3 seconds)
         };
         
